@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lgmtp"
+version = "0.1.0"
+description = "Linguistically guided multi-token prediction / speculative decoding for Hindi (CS769)"
+requires-python = ">=3.9"
+dependencies = [
+  "numpy", "pandas", "scipy", "matplotlib",
+  "transformers", "datasets", "sklearn-crfsuite", "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]

@@ -1,0 +1,2 @@
+family,lookahead,acceptance_rate,alpha_hat,tokens_per_verif,mean_draft_len,speedup
+Oracle,0,1.0,1.0,3.5727293292613957,2.6265693926026468,1.9027016224729372

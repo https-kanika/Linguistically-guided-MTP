@@ -1,0 +1,39 @@
+{
+ "seed": 0,
+ "n_train_types": 54649,
+ "n_test_types": 6072,
+ "fit_seconds": 75.65856885910034,
+ "crf_params": {
+  "c1": 0.1,
+  "c2": 0.05,
+  "max_iterations": 150
+ },
+ "heldout": {
+  "precision": 0.9238297872340425,
+  "recall": 0.9297644539614561,
+  "f1": 0.9267876200640341,
+  "tp": 4342,
+  "n_pred": 4700,
+  "n_gold": 4670,
+  "word_exact_match": 0.8990447957839263
+ },
+ "heldout_before_akshara_postprocess": {
+  "precision": 0.9238297872340425,
+  "recall": 0.9297644539614561,
+  "f1": 0.9267876200640341,
+  "tp": 4342,
+  "n_pred": 4700,
+  "n_gold": 4670,
+  "word_exact_match": 0.8990447957839263
+ },
+ "baseline_every_akshara_boundary": {
+  "precision": 0.2808177991581479,
+  "recall": 1.0,
+  "f1": 0.4384976525821596,
+  "tp": 4670,
+  "n_pred": 16630,
+  "n_gold": 4670,
+  "word_exact_match": 0.03145586297760211
+ },
+ "n_raw_predictions_removed_by_postprocess": 0
+}

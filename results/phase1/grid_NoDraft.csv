@@ -1,0 +1,2 @@
+family,lookahead,acceptance_rate,alpha_hat,tokens_per_verif,mean_draft_len,speedup
+NoDraft,0,0.0,0.0,1.0,0.0,1.0

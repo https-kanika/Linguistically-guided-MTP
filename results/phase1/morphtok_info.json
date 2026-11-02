@@ -1,0 +1,37 @@
+{
+ "path": "hindi.csv",
+ "sha256": "21b1a0c219ad80bcf112fee0172aeab0e7102662cb49f79e3c8c8a274902819d",
+ "rows": 72257,
+ "unique_words": 69962,
+ "kept_rows": 61766,
+ "dropped_rows": 10491,
+ "dropped_examples": [
+  "दत्तेश -> दत्त+ईश",
+  "फटक -> फट्+अक",
+  "तरस्वीर -> तरस्वि+ईर",
+  "शल्लेश्वर -> शल्ला+ईश्वर",
+  "हृदयेश्वर -> हृदय+ईश्वर",
+  "अन्तर्कलह -> अन्तः+कलह",
+  "ऋषभानन्द -> ऋषभ+आनन्द",
+  "हैमहेश -> हैम+ह+ईश",
+  "वर्गसङ्घर्ष -> वर्ग+सम्+घर्ष",
+  "व्यतिकरण -> वि+अति+कर्+अन"
+ ],
+ "languages": {
+  "hi": 72257
+ },
+ "lexicon": {
+  "words": 60721,
+  "words_with_multiple_segmentations": 1045,
+  "raw_internal_boundaries": 47360,
+  "boundaries_inside_akshara_snapped": 4916,
+  "final_internal_boundaries": 47319
+ },
+ "source": {
+  "hindi.csv": {
+   "source": "local copy supplied by the user (originally MorphTok, karthika95/morphTok)",
+   "revision": null,
+   "sha256": "21b1a0c219ad80bcf112fee0172aeab0e7102662cb49f79e3c8c8a274902819d"
+  }
+ }
+}

@@ -1,0 +1,46 @@
+{
+ "best_k_dev": 2,
+ "fixed_test": {
+  "acceptance_rate": 0.6506943489619139,
+  "alpha_hat": 0.7505054910201007,
+  "tokens_per_verif": 2.2594708562878325,
+  "mean_draft_len": 1.9786438141875808,
+  "speedup": 1.3782629401111155
+ },
+ "fixed_k2_all": {
+  "acceptance_rate": 0.6512664570303052,
+  "alpha_hat": 0.7514752791068581,
+  "tokens_per_verif": 2.2591073747522383,
+  "mean_draft_len": 1.9779235869045177,
+  "speedup": 1.378236876604496
+ },
+ "entropy_params": {
+  "lam": -0.369,
+  "beta": 2.0
+ },
+ "entropy_test": {
+  "acceptance_rate": 0.6841917140536149,
+  "alpha_hat": 0.7580372250423012,
+  "tokens_per_verif": 2.633243500317058,
+  "mean_draft_len": 2.4393627140139507,
+  "speedup": 1.4725386884977336
+ },
+ "oracle_test": {
+  "acceptance_rate": 1.0,
+  "alpha_hat": 1.0,
+  "tokens_per_verif": 3.578306764325722,
+  "mean_draft_len": 2.630654890133563,
+  "speedup": 1.9341714948296993
+ },
+ "expected": {
+  "fixed_k2": 1.361,
+  "entropy": 1.452,
+  "oracle": 1.905
+ },
+ "gap": {
+  "fixed": 0.01726294011111551,
+  "entropy": 0.02053868849773366,
+  "oracle": 0.029171494829699274
+ },
+ "within_0.03": true
+}

@@ -1,0 +1,6 @@
+tokenizer,metric,expected,got,ok
+meta-llama/Llama-3.2-1B-Instruct,tokens_per_word,2.67,2.672,True
+meta-llama/Llama-3.2-1B-Instruct,pct_cuts_word_boundary,38.6,38.629,True
+meta-llama/Llama-3.2-1B-Instruct,pct_cuts_mid_akshara,54.3,54.297,True
+meta-llama/Llama-3.2-1B-Instruct,k4_inside_word,60.6,60.641,True
+Qwen/Qwen3.5-0.8B [legacy Qwen2 regex],tokens_per_word,3.33,3.331,True

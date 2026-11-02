@@ -1,0 +1,69 @@
+{
+ "selected": {
+  "FixedK": {
+   "k": 2
+  },
+  "Entropy": {
+   "lam": -0.683,
+   "beta": 4.0
+  },
+  "NoDraft": {},
+  "WordBoundarySoft": {
+   "tau": 0.05,
+   "min_g": 2
+  },
+  "WordBoundaryHard": {
+   "min_g": 2
+  },
+  "AksharaSafeEntropy": {
+   "lam": -0.746,
+   "beta": 4.0,
+   "tau_m": 0.7,
+   "max_ext": 1
+  },
+  "Hybrid": {
+   "lam": -0.621,
+   "beta": 2.0,
+   "tau_w": 0.2,
+   "max_ext": 0
+  },
+  "MorphEntropy": {
+   "lam": -0.683,
+   "beta": 4.0,
+   "tau_morph": 0.1,
+   "use_akshara": false,
+   "tau_m": 0.5,
+   "max_ext": 0
+  },
+  "MorphOnly": {
+   "tau_morph": 0.05,
+   "min_g": 2
+  },
+  "Oracle": {},
+  "GoldWordOracle": {
+   "min_g": 1
+  },
+  "Hybrid_ext1": {
+   "lam": -0.683,
+   "beta": 4.0,
+   "tau_w": 0.2,
+   "max_ext": 1
+  },
+  "MorphEntropy_ext1": {
+   "lam": -0.621,
+   "beta": 4.0,
+   "tau_morph": 0.1,
+   "use_akshara": false,
+   "tau_m": 0.5,
+   "max_ext": 1
+  }
+ },
+ "c": 0.3231310483397806,
+ "verify": "measured",
+ "selection": "dev speed-up, lookahead charged",
+ "tokenizer": "meta-llama/Llama-3.2-1B-Instruct",
+ "eos_ids": [
+  128001,
+  128009
+ ]
+}
