@@ -366,8 +366,12 @@ def build() -> tuple[str, str]:
       "parameters: NoDraft, FixedK, Entropy, WordBoundarySoft, Hybrid and MorphEntropy_ext1. These are the "
       "*same* policy classes as in the simulator, behind a causality-checked live view. Outputs are compared "
       "with unbatched greedy decoding (losslessness). Notebook 04 compares the measured results with the "
-      "simulator on teacher-forced traces of the same outputs. The CPU smoke test passed: all decodes were "
-      "lossless, and live draft lengths matched the simulator round by round.\n")
+      "simulator on teacher-forced traces of the same outputs. CPU smoke tests passed in two modes: "
+      "(i) draft = target, where nothing is rejected and live draft lengths match the simulator round by round; "
+      "(ii) a noisy draft (deterministic logit noise, about half the rounds have a rejection), which exercises "
+      "rejection and KV-cache cropping. All decodes were lossless in both modes. Mode (ii) was added after the "
+      "first Kaggle run failed in cache cropping: transformers 5.22's `crop` takes a negative token count, and "
+      "mode (i) never crops.\n")
     if real_done:
         ll = C("real_loop_lossless.csv")
         rl = C("real_loop.csv")
@@ -436,7 +440,8 @@ def build() -> tuple[str, str]:
       "python scripts/build_kaggle_notebooks.py 01       # -> kaggle/01_traces_v2.ipynb  (run on Kaggle, SPLIT=dev, then devtest)\n"
       "python scripts/download_morphtok.py && python scripts/build_morph.py   # MorphTok + CRF (T3)\n"
       "jupyter nbconvert --execute notebooks/02_policies_v2.ipynb             # T3 steps 5-6, T4 check, T7, T8\n"
-      "python scripts/smoke_cpu.py --part 03 --selected results/phase1/selected_params.json\n"
+      "python scripts/smoke_cpu.py --part 03 --selected results/phase1/selected_params.json             # draft = target\n"
+      "python scripts/smoke_cpu.py --part 03 --selected results/phase1/selected_params.json --noise 2   # rejections\n"
       "python scripts/build_kaggle_notebooks.py 03       # -> kaggle/03_real_loop.ipynb (run on Kaggle)\n"
       "jupyter nbconvert --execute notebooks/04_real_loop_analysis.ipynb      # T9 analysis\n"
       "python scripts/make_report.py                     # this report\n"

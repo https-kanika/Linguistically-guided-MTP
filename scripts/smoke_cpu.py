@@ -89,7 +89,9 @@ SMOKE_SELECTED = {
 }
 
 
-def part03(selected_path: str | None = None) -> None:
+def part03(selected_path: str | None = None, noise: float = 0.0) -> None:
+    """noise > 0: the draft gets deterministic logit noise (spec_loop.NoisyDraft), so drafts are rejected
+    and the cache-crop / rejection path of the real loop runs (draft == target never rejects)."""
     import json
     import pickle
     from lgmtp import spec_loop
@@ -98,7 +100,7 @@ def part03(selected_path: str | None = None) -> None:
     from lgmtp.simulator import simulate
     from lgmtp.tuning import Context, make_policy
 
-    out_root = SMOKE_ROOT / "03"
+    out_root = SMOKE_ROOT / ("03_noisy" if noise else "03")
     if out_root.exists():
         shutil.rmtree(out_root)
     if selected_path:   # exercise the real artifacts that notebook 03 will embed
@@ -116,7 +118,8 @@ def part03(selected_path: str | None = None) -> None:
     pm.save(out_root / "prefix_model.pkl.gz")   # used by the notebook 04 dry run
     t0 = time.time()
     res = spec_loop.notebook03_main(dict(SMOKE=True, OUT_ROOT=str(out_root), N_SENT=3, REPEATS=2, MAX_NEW=24,
-                                         SELECTED=selected, PREFIX_MODEL_STATE=state, IDS=ids, GIT_HASH="smoke"))
+                                         SELECTED=selected, PREFIX_MODEL_STATE=state, IDS=ids, GIT_HASH="smoke",
+                                         SMOKE_DRAFT_NOISE=noise))
     print(f"part 03 run: {time.time() - t0:.0f}s")
     with zipfile.ZipFile(res["zip"]) as z:
         names = sorted(z.namelist())
@@ -124,9 +127,15 @@ def part03(selected_path: str | None = None) -> None:
     print("zip contents:", names)
     assert res["n_lossless"] == res["n_results"] == 3 * 2 * len(spec_loop.LIVE_FAMILIES), res
     results = read_jsonl(out_root / "unzipped" / "loop_results.jsonl")
-    # draft == target: every drafted token is accepted
-    for r in results:
-        assert all(rd["accepted"] == rd["g"] for rd in r["rounds"]), (r["policy"], r["rounds"])
+    rounds = [rd for r in results for rd in r["rounds"]]
+    n_rej = sum(rd["accepted"] < rd["g"] for rd in rounds)
+    if noise:
+        # rejections happened, so caches were cropped, and every output is still identical to greedy
+        print(f"rounds with a rejection: {n_rej} / {len(rounds)}")
+        assert n_rej > 0, "noise too small: no rejection, crop path not exercised"
+    else:
+        # draft == target: every drafted token is accepted
+        assert n_rej == 0, "draft == target must never reject"
 
     # simulator vs live on the teacher-forced traces of the same outputs (notebook 04 in miniature)
     traces, _ = load_traces(out_root / "unzipped" / "traces_real100.npz")
@@ -146,12 +155,17 @@ def part03(selected_path: str | None = None) -> None:
         for sid, p, g, a, _ in sim.records:
             sim_g.setdefault(sid, []).append(g)
         live = [r for r in results if r["policy"] == fam and r["rep"] == 0]
+        agree = []
         for r in live:
             lg = [rd["g"] for rd in r["rounds"]]
             sg = sim_g[r["id"]]
-            # identical except the last round: the simulator caps at n - p, the live loop at max_new - p
-            assert lg[:-1] == sg[:-1], (fam, r["id"], lg, sg)
-        print(f"{fam:18s} live vs simulated draft lengths agree (sentences: {len(live)})")
+            # identical except the last round: the simulator caps at n - p, the live loop at max_new - p.
+            # With a noisy draft, dynamic policies may legitimately differ after a mismatch (teacher-forcing
+            # approximation); fixed-length policies must still agree exactly.
+            if not noise or fam in ("NoDraft", "FixedK"):
+                assert lg[:-1] == sg[:-1], (fam, r["id"], lg, sg)
+            agree.append(lg[:-1] == sg[:-1])
+        print(f"{fam:18s} live vs simulated draft lengths identical in {sum(agree)}/{len(agree)} sentences")
     print("\nSMOKE 03 PASSED")
 
 
@@ -159,11 +173,12 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--part", choices=["01", "03"], required=True)
     ap.add_argument("--selected", default=None, help="selected_params.json (part 03; default: smoke params)")
+    ap.add_argument("--noise", type=float, default=0.0, help="part 03: draft logit noise (exercise rejections)")
     a = ap.parse_args()
     if a.part == "01":
         part01()
     else:
-        part03(a.selected)
+        part03(a.selected, a.noise)
 
 
 if __name__ == "__main__":

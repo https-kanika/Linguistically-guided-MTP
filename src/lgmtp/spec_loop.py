@@ -34,10 +34,40 @@ def _torch():
 
 
 def crop_to(cache, length: int) -> None:
-    """Crop a DynamicCache to ``length`` tokens (no-op if already shorter)."""
+    """Crop a DynamicCache to ``length`` tokens (no-op if already shorter).
+
+    transformers 5.22: ``DynamicCache.crop(n)`` removes ``-n`` tokens for negative n and rejects positive n
+    (older versions took the final length). The result is checked so an API change fails loudly
+    instead of silently corrupting the cache."""
     cur = cache.get_seq_length()
     if cur > length:
-        cache.crop(cur - length)
+        cache.crop(-(cur - length))
+        got = cache.get_seq_length()
+        if got != length:
+            raise RuntimeError(f"cache crop failed: expected length {length}, got {got} (transformers API change?)")
+
+
+class NoisyDraft:
+    """CPU smoke-test helper: wraps a causal LM and adds deterministic Gaussian noise to its logits,
+    seeded by the token that precedes each predicted position. Teacher-forced and live calls therefore
+    see the same draft distribution for the same context, while draft and target now disagree, so the
+    rejection / cache-crop path of the real loop is exercised. Not used on Kaggle."""
+
+    def __init__(self, model, sigma: float = 3.0, seed: int = 1234):
+        self.model, self.sigma, self.seed = model, float(sigma), int(seed)
+
+    def __getattr__(self, name):
+        return getattr(self.model, name)
+
+    def __call__(self, input_ids=None, **kw):
+        torch = _torch()
+        out = self.model(input_ids=input_ids, **kw)
+        V = out.logits.shape[-1]
+        prev = input_ids[0].tolist()
+        noise = torch.stack([torch.randn(V, generator=torch.Generator().manual_seed(self.seed * 1_000_003 + int(t)))
+                             for t in prev]).to(out.logits.device, out.logits.dtype)
+        out.logits = out.logits + self.sigma * noise[None]
+        return out
 
 
 def _sync():
@@ -268,6 +298,8 @@ def notebook03_main(cfg: dict) -> dict:
         device, dtype = "cpu", torch.float32
         tok = G.load_tokenizer(cfg["DRAFT"])
         draft = target = G.load_draft(cfg["DRAFT"], dtype, device)
+        if cfg.get("SMOKE_DRAFT_NOISE"):          # exercise rejections + cache cropping on CPU
+            draft = NoisyDraft(target, cfg["SMOKE_DRAFT_NOISE"])
     else:
         assert torch.cuda.device_count() >= 2, "Need 2 GPUs: Settings > Accelerator > GPU T4 x2"
         device, dtype = "cuda:0", torch.float16
