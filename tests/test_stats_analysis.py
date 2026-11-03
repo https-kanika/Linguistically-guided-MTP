@@ -84,3 +84,20 @@ def test_add_morph_start_shift():
     from lgmtp.analysis import add_morph_start
     df = pd.DataFrame(dict(sid=[0, 0, 0, 1, 1], morph_boundary_after=[False, True, False, False, False]))
     assert list(add_morph_start(df).morph_start) == [True, False, True, True, False]
+
+
+def test_eos_cap_and_gap_decomposition():
+    from lgmtp.analysis import eos_capped_g, gap_decomposition
+    assert eos_capped_g(dict(p=70, g=6), 71) == 1 and eos_capped_g(dict(p=10, g=3), 71) == 3
+    timing = dict(t_draft=0.02, t_target=0.07, t_target_verify={str(g): 0.07 for g in range(1, 9)})
+
+    def rd(p, g, a):
+        return dict(p=p, g=g, accepted=a, extra_lookahead=False, t_draft=0.02 * g, t_verify=0.07)
+    nod = [dict(policy="NoDraft", id=0, rep=0, n_out=4, wall=4 * 0.07, rounds=[rd(p, 0, 0) for p in range(4)])]
+    # two rounds: p=0 drafts 2 (all accepted, +1 bonus), p=3 drafts 5 but only 1 token remains
+    spec = [dict(policy="X", id=0, rep=0, n_out=4, wall=0.07 * 2 + 0.02 * 7,
+                 rounds=[rd(0, 2, 2), rd(3, 5, 5)])]
+    d = gap_decomposition(nod + spec, timing, {"X": 1.0, "NoDraft": 1.0}).set_index("policy").loc["X"]
+    assert d.eos_overrun_tokens_per_sentence == 4
+    assert d.speedup_real_rounds_capped_model > d.speedup_real_rounds_model
+    assert abs(d.speedup_wall - d.speedup_real_rounds_measured) < 1e-9          # no overhead in this toy

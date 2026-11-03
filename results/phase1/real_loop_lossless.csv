@@ -1,0 +1,7 @@
+policy,identical,decodes
+Entropy,285,300
+FixedK,285,300
+Hybrid,288,300
+MorphEntropy_ext1,288,300
+NoDraft,288,300
+WordBoundarySoft,285,300

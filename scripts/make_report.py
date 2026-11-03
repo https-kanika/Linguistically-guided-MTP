@@ -135,9 +135,14 @@ def build() -> tuple[str, str]:
       f"\"morpheme\" row never used MorphTok. The fixed-k, entropy and oracle numbers reproduce the old "
       f"protocol within {max(abs(v) for v in LP['gap'].values()):.3f}.")
     if real_done:
-        rl = C("real_loop.csv").set_index("policy")
-        A(f"- Real draft-and-verify loop on GPU (100 devtest sentences): Entropy reaches "
-          f"{rl.loc['Entropy', 'speedup_wall']:.3f}× wall-clock speed-up over plain greedy decoding (details in §9).")
+        rc = C("real_loop_ci.csv").set_index("policy")
+        dc = C("sim_vs_real_decomposition.csv").set_index("policy").drop("NoDraft")
+        A(f"- On the GPU, a real draft-and-verify loop (100 devtest sentences, 3 repeats) gives the same ranking. "
+          f"Entropy reaches **{rc.loc['Entropy', 'speedup_wall']:.3f}×** [{rc.loc['Entropy', 'lo']:.3f}, "
+          f"{rc.loc['Entropy', 'hi']:.3f}] wall-clock speed-up over plain greedy decoding and beats every other "
+          f"policy in a paired bootstrap. The simulator predicts {pct(-dc.total.max())}–{pct(-dc.total.min())} too "
+          f"high. Most of that is our loop drafting past the end of each sentence; the teacher-forcing "
+          f"approximation itself costs at most {pct(-dc.step_teacher_forcing.min())} (§9).")
     else:
         A(f"- Real draft-and-verify loop (wall-clock speed-up, losslessness, simulator accuracy): {PH} (§9).")
     A("")
@@ -373,27 +378,137 @@ def build() -> tuple[str, str]:
       "first Kaggle run failed in cache cropping: transformers 5.22's `crop` takes a negative token count, and "
       "mode (i) never crops.\n")
     if real_done:
-        ll = C("real_loop_lossless.csv")
-        rl = C("real_loop.csv")
-        svr = C("sim_vs_real.csv")
-        A("**Losslessness** (decodes identical to unbatched greedy output):\n")
-        A(md_table(ll))
-        if has("real_loop_divergences.csv"):
-            dv = C("real_loop_divergences.csv")
-            A(f"\n{len(dv)} divergences (repeat 0), max |logit margin| at the divergence point = "
-              f"{dv['margin'].abs().max():.4f} (fp16 near-ties; `real_loop_divergences.csv`).\n")
-        A("\n**Wall-clock** (median over repeats):\n")
-        A(md_table(rl[["policy", "tokens_per_s", "speedup_wall", "tokens_per_verif", "mean_draft_len", "acceptance_rate",
-                       "lossless_rate"]], fmt={"acceptance_rate": pct, "lossless_rate": pct}))
-        A("\n**Simulator vs real:**\n")
-        cols = ["policy", "tokens_per_verif_real", "tokens_per_verif_sim", "mean_draft_len_real", "mean_draft_len_sim",
-                "speedup_wall", "speedup_sim_charged", "speedup_sim_uncharged"] + \
-               [c for c in svr.columns if c.startswith("relerr_")] + ["flag_gt_5pct"]
-        A(md_table(svr[cols], fmt={c: pct for c in svr.columns if c.startswith("relerr_")}))
+        ll = C("real_loop_lossless.csv").set_index("policy")
+        rl = C("real_loop.csv").set_index("policy")
+        svr = C("sim_vs_real.csv").set_index("policy")
+        rci = C("real_loop_ci.csv").set_index("policy")
+        dec = C("sim_vs_real_decomposition.csv").set_index("policy")
+        am = C("real_loop_after_mismatch.csv")
+        dv = C("real_loop_divergences.csv") if has("real_loop_divergences.csv") else pd.DataFrame()
+        RI = J("real_loop_run_info.json") if has("real_loop_run_info.json") else {}
+        cmt = C("real_loop_cost_model.csv").set_index("g")
+        am_e = am[am.policy == "Entropy"].set_index("source").mean_after_mismatch
+        order = [p for p in rci.index if p != "NoDraft"] + ["NoDraft"]
+        e = rci.loc["Entropy"]
+        others = [p for p in order if p not in ("Entropy", "NoDraft")]
+        runner = others[0]
+        A(f"**Run.** Build `{RI.get('git_hash', '?')}`, transformers {RI.get('transformers', '?')}, "
+          f"torch {RI.get('torch', '?')}, 2× T4, {RI.get('n_sent', 100)} sentences × {RI.get('repeats', 3)} timed "
+          f"repeats per policy after a warm-up; per-sentence wall time is the median over repeats, and speed-up is "
+          f"the ratio of summed wall times against NoDraft on the same sentences. The parameters that ran are "
+          f"stored in the run's `run_info.json` and match `selected_params.json`.\n")
+        A("### 9.1 Results\n")
+        A(f"- **The ranking from the simulator holds on the GPU.** Entropy is fastest at "
+          f"**{e.speedup_wall:.3f}×** [{e.lo:.3f}, {e.hi:.3f}] wall-clock over plain greedy decoding. Every other "
+          f"policy is significantly slower in a paired bootstrap; the closest is {runner} "
+          f"(Δ {rci.loc[runner, 'diff_vs_ref']:+.3f} [{rci.loc[runner, 'diff_lo']:+.3f}, {rci.loc[runner, 'diff_hi']:+.3f}]). "
+          f"The two linguistic policies with lookahead (Hybrid, WordBoundarySoft) are the slowest drafting "
+          f"policies, as predicted by the charged simulation.")
+        A(f"- **Acceptance is simulated almost exactly**: tokens per verification differ by at most "
+          f"{pct(svr.relerr_tokens_per_verif.abs().max(), 2)} between simulator and real loop.")
+        A(f"- **The simulator over-predicts speed-up by {pct(-dec.drop('NoDraft').total.max())}–"
+          f"{pct(-dec.drop('NoDraft').total.min())}** (Entropy: {dec.loc['Entropy', 'speedup_sim']:.3f} predicted vs "
+          f"{dec.loc['Entropy', 'speedup_wall']:.3f} measured). §9.3 splits this gap into its causes. The "
+          f"teacher-forcing approximation accounts for only {pct(-dec.drop('NoDraft').step_teacher_forcing.max())}–"
+          f"{pct(-dec.drop('NoDraft').step_teacher_forcing.min())}; the largest part is a live-loop inefficiency at "
+          f"the end of each sentence, which costs all drafting policies.")
+        A(f"- **Losslessness**: {ll.identical.min()}–{ll.identical.max()} of {ll.decodes.max()} decodes per policy "
+          f"are token-identical to unbatched greedy decoding, *including NoDraft* ({ll.loc['NoDraft', 'identical']}/"
+          f"{ll.loc['NoDraft', 'decodes']}), which does no speculation. All divergences are fp16 near-ties (§9.2).\n")
+        A(img("plot_sim_vs_real.png", "real vs simulated speed-up"))
+        A("\n*Figure: wall-clock speed-up with 95% sentence-bootstrap CI (blue) and the simulator's prediction on "
+          "teacher-forced traces of the same 100 outputs (orange).*\n")
+        tab = pd.DataFrame([dict(
+            policy=p,
+            **{"params": rl.loc[p, "params"]},
+            **{"wall speed-up [95% CI]": f"{rci.loc[p, 'speedup_wall']:.3f} [{rci.loc[p, 'lo']:.3f}, {rci.loc[p, 'hi']:.3f}]",
+               "Δ vs Entropy [95% CI]": ("0" if p == "Entropy" else
+                                         f"{rci.loc[p, 'diff_vs_ref']:+.3f} [{rci.loc[p, 'diff_lo']:+.3f}, {rci.loc[p, 'diff_hi']:+.3f}]"),
+               "simulated (charged)": f"{svr.loc[p, 'speedup_sim_charged']:.3f}",
+               "sim error": pct(svr.loc[p, "relerr_speedup_charged"]),
+               "tokens/s": f"{rl.loc[p, 'tokens_per_s']:.1f}",
+               "tokens/verification (real / sim)": f"{svr.loc[p, 'tokens_per_verif_real']:.3f} / {svr.loc[p, 'tokens_per_verif_sim']:.3f}",
+               "acceptance": pct(rl.loc[p, "acceptance_rate"]),
+               "extra lookahead forwards": int(rl.loc[p, "extra_lookahead_rounds"]),
+               "lossless": f"{ll.loc[p, 'identical']}/{ll.loc[p, 'decodes']}"}) for p in order])
+        A(md_table(tab))
+        A("\n(`real_loop.csv`, `real_loop_ci.csv`, `sim_vs_real.csv`, `real_loop_lossless.csv`. Extra lookahead "
+          "forwards: rounds where a lookahead policy stopped by itself and paid the extra draft step, repeat 0.)\n")
+
+        A("### 9.2 Losslessness\n")
+        if len(dv):
+            g = (dv.groupby(["id", "pos"]).agg(margin=("margin", "first"), policies=("policy", lambda s: ", ".join(s)))
+                 .reset_index())
+            A(f"Divergences are deterministic: the same {dv.id.nunique()} sentences diverge in all 3 repeats, so "
+              f"each (sentence, policy) pair below accounts for 3 non-identical decodes. At every divergence the "
+              f"target's top two logits differ by at most {dv.margin.abs().max():.4f}, i.e. one or two fp16 rounding "
+              f"steps. NoDraft diverges on {int((dv.policy == 'NoDraft').sum())} sentences, and several divergences "
+              f"happen at the same position for every policy. The cause is numerical (incremental KV-cache decoding "
+              f"versus the reference `generate` call, different kernel shapes in fp16), not the speculative "
+              f"algorithm, which only ever commits the target's argmax.\n")
+            A(md_table(g.rename(columns={"id": "sentence id", "pos": "position", "margin": "top-2 logit margin",
+                                         "policies": "policies that diverge here"}),
+                       fmt={"top-2 logit margin": lambda x: f"{x:.4f}"}))
+            A("")
+        A("### 9.3 Why the simulator over-predicts\n")
+        A("The gap between the simulated and the wall-clock speed-up is split into four steps, each a ratio of "
+          "speed-ups on the same sentences:\n")
+        A("1. **Teacher forcing**: simulator vs the *real* rounds priced with the same cost model, with the last "
+          "round of each sentence capped at the end of the sentence as the simulator does. This is the only "
+          "approximation the simulator makes about policy behaviour.")
+        A("2. **End-of-sentence overrun**: the live loop caps a draft at `max_new − p`, not at the sentence end. In "
+          "the round that commits the end-of-sentence token, the draft emits it, keeps going (it is confident "
+          "after an EOS), and the target accepts those tokens before the output is truncated. These tokens are "
+          "drafted for nothing.")
+        A("3. **Cost model**: real rounds priced with the cost model vs with the measured draft and verify times.")
+        A("4. **Overhead**: measured forward times vs total wall time (token selection, cache cropping, Python).\n")
+        dshow = dec.drop("NoDraft").reset_index()[["policy", "speedup_sim", "speedup_real_rounds_capped_model",
+                                                   "speedup_real_rounds_model", "speedup_real_rounds_measured",
+                                                   "speedup_wall", "eos_overrun_tokens_per_sentence",
+                                                   "step_teacher_forcing", "step_eos_overrun", "step_cost_model",
+                                                   "step_overhead", "total"]]
+        dshow.columns = ["policy", "simulated", "real rounds, capped, model cost", "real rounds, model cost",
+                         "real rounds, measured cost", "wall clock", "EOS overrun (draft tokens / sentence)",
+                         "1 teacher forcing", "2 EOS overrun", "3 cost model", "4 overhead", "total"]
+        A(md_table(dshow, fmt={c: pct for c in ["1 teacher forcing", "2 EOS overrun", "3 cost model", "4 overhead", "total"]}
+                   | {"EOS overrun (draft tokens / sentence)": lambda x: f"{x:.1f}"}))
+        de = dec.loc["Entropy"]
+        fixed_est = de.speedup_wall * de.speedup_real_rounds_capped_model / de.speedup_real_rounds_model
+        A(f"\n(`sim_vs_real_decomposition.csv`)\n")
+        A(f"- **Teacher forcing is a small effect** ({pct(-dec.drop('NoDraft').step_teacher_forcing.max())}–"
+          f"{pct(-dec.drop('NoDraft').step_teacher_forcing.min())}). The table below compares rounds directly. Once the "
+          f"end-of-sentence round is capped, real and simulated rounds have the same share of rejections and the "
+          f"same draft lengths. In the real loop the draft continues on its *own* wrong token after a mismatch, "
+          f"which makes it draft slightly more after the first mismatch for Entropy and Hybrid "
+          f"(Entropy {am_e['real']:.3f} vs {am_e['sim']:.3f} tokens per rejected round).")
+        A(f"- **The end-of-sentence overrun is the largest effect for the entropy-style policies** "
+          f"({pct(-de.step_eos_overrun)} for Entropy, {de.eos_overrun_tokens_per_sentence:.1f} wasted draft tokens per "
+          f"sentence). FixedK (k=2) wastes at most 1 token, so it is barely affected. This is a fixable inefficiency "
+          f"of our loop, not of the policies: stopping the draft once it emits an end-of-sentence token keeps the "
+          f"output identical and would put Entropy at about **{fixed_est:.2f}×** (estimate: measured speed-up "
+          f"× step 2 removed). Because it costs every drafting policy, it does not change the ranking.")
+        A(f"- **The cost model holds per round** (table below: modelled vs measured time per round within a few "
+          f"percent for every g). The {pct(-dec.drop('NoDraft').step_cost_model.max())}–"
+          f"{pct(-dec.drop('NoDraft').step_cost_model.min())} step comes mostly from the baseline: a plain decode step "
+          f"inside the loop ({cmt.loc[0, 't_verify_ms']:.1f} ms) is faster "
+          f"than the {cmt.loc[0, 'model_t_verify_ms']:.1f} ms "
+          f"measured in notebook 01, so NoDraft gains relative to the drafting policies.")
+        A(f"- **Per-round overhead** outside the forwards is {pct(dec.drop('NoDraft').overhead_share_of_wall.min())}–"
+          f"{pct(dec.drop('NoDraft').overhead_share_of_wall.max())} of wall time for drafting policies vs "
+          f"{pct(dec.loc['NoDraft', 'overhead_share_of_wall'])} for NoDraft, about 1% of speed-up.\n")
+        A("**Rounds, real loop (end-capped) vs simulator** (`real_loop_after_mismatch.csv`, repeat 0):\n")
+        ams = am.copy()
+        ams.columns = ["policy", "source", "rounds", "share rejected", "mean g (fully accepted)",
+                       "mean g (rejected)", "tokens drafted after 1st mismatch"]
+        A(md_table(ams, fmt={"share rejected": pct}))
         if has("real_loop_cost_model.csv"):
-            A("\n**Cost model check** (measured vs modelled time per round, by draft length g):\n")
-            A(md_table(C("real_loop_cost_model.csv")))
-        A("")
+            A("\n**Cost model check** (mean measured time per round vs the model, by draft length g; all policies "
+              "and repeats; `frac_extra` = share of rounds with an extra lookahead forward; "
+              "`real_loop_cost_model.csv`):\n")
+            A(md_table(C("real_loop_cost_model.csv"), fmt={"g": lambda x: str(int(x)), "rounds": lambda x: str(int(x)), "frac_extra": pct}))
+        A("\n**Bottom line for §8.** On real hardware the simulator's ranking holds and Entropy stays best. The "
+          "simulated speed-ups are 3–8% too high for this loop, mostly for an engineering reason (drafting past "
+          "the end of the sentence) that affects all drafting policies, not the comparison between them.\n")
     else:
         A(f"**Losslessness:** {PH}\n")
         A(md_table(pd.DataFrame([[p, PH, PH] for p in ["NoDraft", "FixedK", "Entropy", "WordBoundarySoft", "Hybrid",
@@ -416,7 +531,12 @@ def build() -> tuple[str, str]:
     A("## 10. Caveats and limitations\n")
     for c in [
         "Simulated speed-ups use teacher-forced traces; only the stopping decision after a mismatch is "
-        "approximated (§9 measures the gap).",
+        "approximated. §9 measures the gap on the GPU: the simulator is 3–8% optimistic in absolute terms, "
+        "mostly because of an end-of-sentence inefficiency in our live loop, and it keeps the ranking. Compare "
+        "policies with the simulated numbers; quote wall-clock numbers from §9.",
+        "The real loop covers 100 sentences (not all 1012). In the last round of each sentence it drafts past "
+        "the end-of-sentence token (§9.3). Fixing that would raise every drafting policy's wall-clock speed-up "
+        "(Entropy to about 1.40×).",
         f"c = {T['c']:.3f} was measured with the 8B target split over two T4s, so every target step includes a "
         "GPU-to-GPU hop. On one large GPU, c and all speed-ups would shift (their ranking probably less so).",
         "Lookahead policies are reported both charged (conservative, used for selection) and uncharged "
@@ -462,6 +582,10 @@ def build() -> tuple[str, str]:
         "MorphTok gold lexicon + CRF + causal prefix model (T3), causal simulator (T4), 11 policy families tuned "
         "on dev and evaluated on devtest with bootstrap CIs (T5–T7), failure analysis (T8), real draft-and-verify "
         f"loop (T9: {'done' if real_done else 'pending'}).\n",
+        (f"Real loop (100 devtest sentences, wall clock): Entropy "
+         f"{C('real_loop_ci.csv').set_index('policy').loc['Entropy', 'speedup_wall']:.3f}× over greedy, best of all "
+         f"policies; the simulator ranks policies the same way but is a few percent optimistic (REPORT §9).\n"
+         if real_done else ""),
         f"Headline (devtest): Entropy {E.speedup_charged:.3f}× [{E.CI_low:.3f}, {E.CI_high:.3f}], best fixed-k "
         f"{FK.speedup_charged:.3f}×, oracle {O.speedup_charged:.3f}×; no linguistic policy beats Entropy "
         f"(best: {best_ling} {m.loc[best_ling, 'speedup_charged']:.3f}×), and at equal entropy linguistic "

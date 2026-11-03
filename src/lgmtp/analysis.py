@@ -165,6 +165,132 @@ def cost_model_table(results: list[dict], t_draft: float, t_target: float, verif
     return out
 
 
+def eos_capped_g(rd: dict, n_out: int) -> int:
+    """Draft length of a live round capped like the simulator (g <= n - p). The live loop caps only at
+    max_new - p, so in the round that commits the end-of-sentence token it keeps drafting past it."""
+    return max(0, min(rd["g"], n_out - rd["p"]))
+
+
+def _median_per_sentence(results: list[dict], timing: dict):
+    """Per (policy, id): median over repeats of wall time, of the measured draft+verify time, and of
+    the cost-model time of the rounds that actually ran (g*t_draft [+ lookahead] + verify(g)*t_target),
+    also with g capped at the end of the sentence as in the simulator (``model_capped``), and the
+    number of draft tokens proposed past the end (``eos_overrun``)."""
+    import pandas as pd
+    td, tt = timing["t_draft"], timing["t_target"]
+    vt = {int(k): v for k, v in timing["t_target_verify"].items()}
+
+    def cost(g, extra):
+        return td * (g + extra) + (vt[g] if g > 0 else tt)
+
+    rows = []
+    for r in results:
+        rd = r["rounds"]
+        rows.append(dict(policy=r["policy"], id=r["id"], wall=r["wall"],
+                         measured=sum(x["t_draft"] + x["t_verify"] for x in rd),
+                         model=sum(cost(x["g"], x["extra_lookahead"]) for x in rd),
+                         model_capped=sum(cost(eos_capped_g(x, r["n_out"]), x["extra_lookahead"]) for x in rd),
+                         eos_overrun=sum(x["g"] - eos_capped_g(x, r["n_out"]) for x in rd)))
+    return pd.DataFrame(rows).groupby(["policy", "id"]).median(numeric_only=True).reset_index()
+
+
+def real_speedup_ci(results: list[dict], timing: dict, ref: str = "Entropy", n_boot: int = 1000, seed: int = 0):
+    """Wall-clock speed-up vs NoDraft with a sentence-bootstrap CI (ratio of sums of per-sentence
+    medians), and the paired difference to ``ref``."""
+    import pandas as pd
+    from .stats import bootstrap_ci, paired_bootstrap
+    m = _median_per_sentence(results, timing)
+    W = m.pivot(index="id", columns="policy", values="wall").dropna()
+    rows = []
+    for pol in W.columns:
+        ci = bootstrap_ci(W["NoDraft"].values, W[pol].values, n_boot=n_boot, seed=seed)
+        row = dict(policy=pol, speedup_wall=ci["point"], lo=ci["lo"], hi=ci["hi"])
+        if ref in W and pol != ref:
+            d = paired_bootstrap(W["NoDraft"].values, W[pol].values, W["NoDraft"].values, W[ref].values,
+                                 n_boot=n_boot, seed=seed)
+            row.update(diff_vs_ref=d["diff"], diff_lo=d["lo"], diff_hi=d["hi"], p_better_than_ref=d["p_better"])
+        rows.append(row)
+    return pd.DataFrame(rows).sort_values("speedup_wall", ascending=False).reset_index(drop=True)
+
+
+def gap_decomposition(results: list[dict], timing: dict, sim_speedup: dict):
+    """Splits simulator -> wall-clock speed-up into steps (all relative to NoDraft, same sentences):
+    sim (teacher-forced rounds, cost model)
+    -> real rounds capped at end of sentence + cost model  (teacher-forcing approximation)
+    -> real rounds as run + cost model                     (live loop drafts past the end-of-sentence token)
+    -> real rounds, measured draft/verify times            (cost-model error)
+    -> wall clock                                          (per-round overhead outside the forwards)."""
+    import pandas as pd
+    m = _median_per_sentence(results, timing)
+    base = m[m.policy == "NoDraft"].set_index("id")
+    rows = []
+    for pol, g in m.groupby("policy", sort=False):
+        g = g.set_index("id")
+        ids = g.index.intersection(base.index)
+        s_cap = base.model_capped[ids].sum() / g.model_capped[ids].sum()
+        s_model = base.model[ids].sum() / g.model[ids].sum()
+        s_meas = base.measured[ids].sum() / g.measured[ids].sum()
+        s_wall = base.wall[ids].sum() / g.wall[ids].sum()
+        s_sim = sim_speedup.get(pol, float("nan"))
+        rows.append(dict(policy=pol, speedup_sim=s_sim, speedup_real_rounds_capped_model=s_cap,
+                         speedup_real_rounds_model=s_model,
+                         speedup_real_rounds_measured=s_meas, speedup_wall=s_wall,
+                         eos_overrun_tokens_per_sentence=float(g.eos_overrun[ids].mean()),
+                         step_teacher_forcing=s_cap / s_sim - 1, step_eos_overrun=s_model / s_cap - 1,
+                         step_cost_model=s_meas / s_model - 1,
+                         step_overhead=s_wall / s_meas - 1, total=s_wall / s_sim - 1,
+                         overhead_share_of_wall=1 - g.measured[ids].sum() / g.wall[ids].sum()))
+    return pd.DataFrame(rows)
+
+
+def drafting_after_mismatch(results: list[dict], sim_records: dict):
+    """Rounds split into fully accepted vs rejected; mean draft length g and, for rejected rounds,
+    tokens drafted after the first mismatch (g - accepted - 1). Real loop (repeat 0; g capped at the
+    end of the sentence like the simulator, see ``eos_capped_g``) vs simulator
+    records (sid, p, g, a, by_policy). In the real loop the draft continues on its *own* wrong token;
+    on teacher-forced traces it sees the target's token."""
+    import pandas as pd
+    rows = []
+    for pol, recs in sim_records.items():
+        real = [(eos_capped_g(rd, r["n_out"]), min(rd["accepted"], eos_capped_g(rd, r["n_out"])))
+                for r in results if r["policy"] == pol and r["rep"] == 0
+                for rd in r["rounds"] if eos_capped_g(rd, r["n_out"]) > 0]
+        sim = [(g, a) for (_, _, g, a, _) in recs if g > 0]
+        for src, rr in (("real", real), ("sim", sim)):
+            full = [g for g, a in rr if a == g]
+            rej = [(g, a) for g, a in rr if a < g]
+            rows.append(dict(policy=pol, source=src, rounds=len(rr), frac_rejected=len(rej) / max(len(rr), 1),
+                             mean_g_full=float(np.mean(full)) if full else float("nan"),
+                             mean_g_rejected=float(np.mean([g for g, _ in rej])) if rej else float("nan"),
+                             mean_after_mismatch=float(np.mean([g - a - 1 for g, a in rej])) if rej else float("nan")))
+    return pd.DataFrame(rows)
+
+
+def plot_sim_vs_real(ci_tab, sim_tab, path=None):
+    """Real wall-clock speed-up (95% CI) next to the simulator prediction, per policy."""
+    import matplotlib.pyplot as plt
+    t = ci_tab.merge(sim_tab, on="policy").sort_values("speedup_wall")
+    y = np.arange(len(t))
+    fig, ax = plt.subplots(figsize=(7, 0.5 * len(t) + 1.2))
+    ax.errorbar(t.speedup_wall, y + 0.12, xerr=[t.speedup_wall - t.lo, t.hi - t.speedup_wall], fmt="o",
+                color="#2a78d6", ms=7, lw=2, capsize=0, label="real loop, wall clock (95% CI)")
+    ax.plot(t.speedup_sim_charged, y - 0.12, "D", color="#eb6834", ms=7, label="simulator (lookahead charged)")
+    for yi, (r, s) in enumerate(zip(t.speedup_wall, t.speedup_sim_charged)):
+        ax.annotate(f"{r:.3f}", (r, yi + 0.12), xytext=(0, 7), textcoords="offset points", ha="center", fontsize=8, color="#333")
+    ax.axvline(1.0, color="#999", lw=1, ls=":")
+    ax.set_yticks(y, t.policy)
+    ax.set_xlabel("speed-up vs plain greedy decoding")
+    ax.set_title("Real loop vs simulator (100 devtest sentences, 3 repeats)", fontsize=10)
+    ax.grid(axis="x", color="#e6e6e6", lw=0.8); ax.set_axisbelow(True)
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
+    ax.legend(loc="lower right", fontsize=8, frameon=False)
+    fig.tight_layout()
+    if path:
+        fig.savefig(path, dpi=150)
+    return fig
+
+
 def sim_vs_real(real_tab, sim_rows: list[dict], tol: float = 0.05):
     """Join live statistics with simulator predictions; relative errors, flag > tol."""
     import pandas as pd

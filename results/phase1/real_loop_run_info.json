@@ -1,0 +1,87 @@
+{
+ "git_hash": "git=a253e1ed509c-dirty src+artifacts_sha256=0f135c92b058",
+ "torch": "2.11.0+cu128",
+ "transformers": "5.22.1",
+ "python": "3.13.15",
+ "gpus": [
+  "Tesla T4",
+  "Tesla T4"
+ ],
+ "time": "2026-11-02 17:57:04",
+ "n_sent": 100,
+ "repeats": 3,
+ "policies": [
+  "NoDraft",
+  "FixedK",
+  "Entropy",
+  "WordBoundarySoft",
+  "Hybrid",
+  "MorphEntropy_ext1"
+ ],
+ "selected": {
+  "FixedK": {
+   "k": 2
+  },
+  "Entropy": {
+   "lam": -0.683,
+   "beta": 4.0
+  },
+  "NoDraft": {},
+  "WordBoundarySoft": {
+   "tau": 0.05,
+   "min_g": 2
+  },
+  "WordBoundaryHard": {
+   "min_g": 2
+  },
+  "AksharaSafeEntropy": {
+   "lam": -0.746,
+   "beta": 4.0,
+   "tau_m": 0.7,
+   "max_ext": 1
+  },
+  "Hybrid": {
+   "lam": -0.621,
+   "beta": 2.0,
+   "tau_w": 0.2,
+   "max_ext": 0
+  },
+  "MorphEntropy": {
+   "lam": -0.683,
+   "beta": 4.0,
+   "tau_morph": 0.1,
+   "use_akshara": false,
+   "tau_m": 0.5,
+   "max_ext": 0
+  },
+  "MorphOnly": {
+   "tau_morph": 0.05,
+   "min_g": 2
+  },
+  "Oracle": {},
+  "GoldWordOracle": {
+   "min_g": 1
+  },
+  "Hybrid_ext1": {
+   "lam": -0.683,
+   "beta": 4.0,
+   "tau_w": 0.2,
+   "max_ext": 1
+  },
+  "MorphEntropy_ext1": {
+   "lam": -0.621,
+   "beta": 4.0,
+   "tau_morph": 0.1,
+   "use_akshara": false,
+   "tau_m": 0.5,
+   "max_ext": 1
+  }
+ },
+ "smoke": false,
+ "target": "meta-llama/Meta-Llama-3-8B-Instruct",
+ "draft": "meta-llama/Llama-3.2-1B-Instruct",
+ "max_memory": {
+  "0": 8589934592,
+  "1": 10737418240
+ }
+}

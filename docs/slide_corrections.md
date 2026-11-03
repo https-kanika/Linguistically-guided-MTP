@@ -6,7 +6,7 @@ for all speed-ups: 8B target / 1B draft on 2× T4, tuned on FLORES+ **dev**, rep
 **devtest** (1012 sentences), measured verification cost, `c = 0.323`. 95% CIs are sentence
 bootstraps (1000 resamples).
 
-Placeholders `⟨T9: …⟩` will be filled in once the real-loop run (Kaggle notebook 03 → notebook 04) is in.
+Real-loop numbers (T9) come from Kaggle notebook 03 → notebook 04 (`results/phase1/REPORT.md` §9).
 
 ---
 
@@ -72,9 +72,18 @@ Suggested headline: "**No linguistic stopping rule beats the entropy rule.** Eve
 67% of word tokens from the MorphTok lexicon and 31% from the CRF segmenter (held-out boundary F1
 0.93)." (`morph_coverage.json`, `morph_crf_eval.json`)
 
-Real loop (wall-clock, 100 devtest sentences): "Entropy ⟨T9: speed-up⟩× vs plain greedy
-decoding; outputs identical to greedy in ⟨T9: n⟩/⟨T9: N⟩ decodes; the simulator predicts real
-speed-up within ⟨T9: error⟩." (`real_loop.csv`, `real_loop_lossless.csv`, `sim_vs_real.csv`)
+Real loop (wall clock, 100 devtest sentences × 3 repeats, 2× T4): "On real hardware, Entropy gives
+**1.356× [1.328, 1.381]** over plain greedy decoding and is still the best policy. MorphEntropy is
+1.323× (Δ −0.033 [−0.044, −0.022]), fixed k=2 1.304×, Hybrid 1.145× and WordBoundarySoft 1.096×.
+The simulator ranks the policies in the same order. In absolute terms it is 3–8% optimistic (Entropy
+predicted 1.440×)." (`real_loop_ci.csv`, `sim_vs_real.csv`, `sim_vs_real_decomposition.csv`)
+
+If a slide shows the real-loop table, add: "285–288 of 300 decodes are token-identical to unbatched
+greedy decoding. The no-draft baseline is too (288/300), so the remaining divergences are fp16
+near-ties (top-2 logit gap ≤ 0.016), not speculation errors." (`real_loop_lossless.csv`,
+`real_loop_divergences.csv`)
+
+Do **not** say "lossless in 100% of decodes".
 
 ## Any slide quoting the Qwen tokenizer
 
@@ -93,7 +102,12 @@ dev→devtest numbers above, not these.
 ## Caveats to say out loud
 
 - Speed-ups are simulated from teacher-forced traces. Accepted tokens are exact; only the stopping
-  decision after a mismatch is approximated. The real loop measures the gap (⟨T9⟩).
+  decision after a mismatch is approximated. On the GPU, that approximation costs only 0.2–1.4%
+  of speed-up, and tokens per verification match within 0.4%. The simulator is still 3–8% too high
+  overall, mostly because our live loop keeps drafting past the end-of-sentence token in the last
+  round (≈5 wasted draft tokens per sentence for Entropy). That is an implementation inefficiency
+  that hits every drafting policy, not a ranking issue. Fixed, it would put Entropy at about 1.40×.
+  (`sim_vs_real_decomposition.csv`)
 - `c` was measured with the 8B target split over two T4s, so each target step includes a GPU-to-GPU
   hop. On a single large GPU, `c` and the speed-ups would differ.
 - Lookahead policies are shown with the extra draft forward charged (conservative) and uncharged
