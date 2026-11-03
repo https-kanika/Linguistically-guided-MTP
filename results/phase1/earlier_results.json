@@ -1,0 +1,15 @@
+{
+  "source": "Results table of the earlier version of the project (previous course report): 8B target, 1B draft, a random half of FLORES+ devtest as test set, unit verification cost. Copied here so the report can cite it.",
+  "rows": [
+    {"policy": "fixed k=2 (best fixed)", "speedup": 1.361, "acceptance": 0.651, "mean_draft_len": 1.98},
+    {"policy": "entropy (lam=-0.37, beta=2.0)", "speedup": 1.452, "acceptance": 0.684, "mean_draft_len": 2.44},
+    {"policy": "word boundary", "speedup": 1.335, "acceptance": 0.623, "mean_draft_len": 2.09},
+    {"policy": "morpheme lookup", "speedup": 1.066, "acceptance": 0.374, "mean_draft_len": 6.57},
+    {"policy": "hybrid akshara", "speedup": 1.287, "acceptance": 0.690, "mean_draft_len": 1.21},
+    {"policy": "oracle (cap 8)", "speedup": 1.905, "acceptance": 1.0, "mean_draft_len": 2.63}
+  ],
+  "earlier_claims": {
+    "qwen_tokens_per_word": 3.33,
+    "morphtok_type_coverage_3b_run": 0.41
+  }
+}

@@ -1,4 +1,4 @@
-# Slide / script corrections (PLAN T10)
+# Slide and script corrections
 
 Suggested replacement wording for the presentation, based on the Phase 1 re-run. Your slides have
 not been edited. Every number below comes from a file in `results/phase1/` (named next to it). Setup
@@ -6,14 +6,14 @@ for all speed-ups: 8B target / 1B draft on 2× T4, tuned on FLORES+ **dev**, rep
 **devtest** (1012 sentences), measured verification cost, `c = 0.323`. 95% CIs are sentence
 bootstraps (1000 resamples).
 
-Real-loop numbers (T9) come from Kaggle notebook 03 → notebook 04 (`results/phase1/REPORT.md` §9).
+Real-decoding numbers come from the GPU run described in `results/phase1/REPORT.md` §10.
 
 ---
 
 ## Slide 2: motivation
 
 **Remove:** "When a draft ends mid-word or mid-morpheme, acceptance drops."
-T8 does not support this as a causal statement. Verification is token-level, so ending mid-word
+The token-level analysis (REPORT §9) does not support this as a causal statement. Verification is token-level, so ending mid-word
 cannot by itself reduce acceptance. What the data shows is *where* drafts fail, and that confidence
 already explains it.
 
@@ -33,7 +33,7 @@ already explains it.
 
 **Old description** (hybrid = "akshara/word boundary stop"): it did not match the code that ran.
 The old `HybridPolicy` had no entropy term, and its akshara check read the *next* token for free
-(bugs B2, B3).
+(REPORT §3).
 
 **Replace with:**
 - "**Hybrid**: stop when the entropy rule fires (1 − √(βH) < λ) *and* the draft predicts the word
@@ -50,8 +50,8 @@ The old `HybridPolicy` had no entropy term, and its akshara check read the *next
 ## Slide 5: results
 
 **Remove:** "Morpheme result is a coverage failure: MorphTok covers only 41%."
-The old "morpheme lookup" row never used MorphTok: it was an 11-word placeholder dictionary (bug B1).
-The old word-boundary and hybrid rows are also invalid (B2, B3).
+The old "morpheme lookup" row never used MorphTok: it was an 11-word placeholder dictionary (REPORT §3).
+The old word-boundary and hybrid rows are also invalid (REPORT §3).
 
 **Replace the results table with** (`main_table.csv`):
 
