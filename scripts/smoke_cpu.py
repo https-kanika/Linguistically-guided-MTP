@@ -2,6 +2,7 @@
 
     python scripts/smoke_cpu.py --part 01      # notebook 01: generation, teacher-forced passes, timing, zip
     python scripts/smoke_cpu.py --part 03      # notebook 03: real speculative loop (added in step S5)
+    python scripts/smoke_cpu.py --part w1      # notebook 05: week-1 universal head, all stages, tiny models
 
 Uses meta-llama/Llama-3.2-1B-Instruct as both target and draft (fp32, loaded once), 3 sentences per
 split, MAX_NEW=24. Outputs go to data/smoke/ (gitignored).
@@ -169,14 +170,121 @@ def part03(selected_path: str | None = None, noise: float = 0.0) -> None:
     print("\nSMOKE 03 PASSED")
 
 
+# --------------------------------------------------------------------------- #
+# week 1 (notebook 05): every stage with tiny ungated models on CPU
+# --------------------------------------------------------------------------- #
+
+W1_HI = ["भारत में आज नई नीति लागू हुई।", "सरकार ने कहा कि योजना अगले साल शुरू होगी।",
+         "बारिश के कारण कई सड़कें बंद हो गईं।", "उन्होंने बताया कि बच्चे स्कूल जा रहे हैं।",
+         "यह फ़ैसला सभी के लिए महत्वपूर्ण है।", "वैज्ञानिकों ने एक नई खोज की घोषणा की।",
+         "शहर में यातायात की समस्या बढ़ रही है।", "किसानों को फसल का उचित मूल्य मिलना चाहिए।",
+         "मैच के बाद खिलाड़ियों ने दर्शकों का धन्यवाद किया।", "नदी का जल स्तर तेज़ी से बढ़ा है।"]
+W1_EN = ["The government announced a new policy today.", "Heavy rain closed several roads in the city.",
+         "Scientists have discovered a new species of frog.", "The children are going to school by bus.",
+         "Farmers should get a fair price for their crops.", "The river level rose quickly after the storm.",
+         "The players thanked the crowd after the match.", "This decision is important for everyone.",
+         "Traffic problems are growing in the capital.", "The plan will start next year, officials said.",
+         "He said the bridge would be repaired soon."]
+
+
+def part_w1() -> None:
+    import json
+    import random
+    from lgmtp import collect as C
+    from lgmtp.traces import Trace, save_traces
+    from lgmtp.week1 import phase1_constants, week1_main
+
+    out_root = SMOKE_ROOT / "w1"
+    if out_root.exists():
+        shutil.rmtree(out_root)
+    rng = random.Random(0)
+    mono = []
+    for _ in range(60):                      # tiny synthetic Hindi corpus (vocab + text-only pretraining)
+        mono.append(" ".join(rng.sample(W1_HI, 3)))
+    rows = [[i, s] for i, s in enumerate(W1_EN)]
+    sources = dict(dev=rows[:4], devtest=rows[4:7], extra=[[1_000_000 + i, s] for i, s in rows[7:]], mono=mono + W1_HI)
+    models = [
+        dict(key="smol135", names=["HuggingFaceTB/SmolLM2-135M-Instruct"], dtype="fp32", family="smol"),
+        dict(key="qwen0.5", names=["Qwen/Qwen2.5-0.5B-Instruct"], dtype="fp32", family="qwen"),
+        dict(key="smol135base", names=["HuggingFaceTB/SmolLM2-135M-Instruct"], dtype="fp32", family="llama3",
+             prompt_mode="base"),
+    ]
+    # fake "Phase-1 8B traces" built from Qwen-0.5B outputs (exercises the attached-input path of S4)
+    root = out_root / "week1"
+    qd = root / "data" / "qwen0.5"
+    res, info, _ = C.collect_model(models[1], {s: [tuple(r) for r in sources[s]] for s in ("dev", "extra", "devtest")},
+                                   qd, 2, 24, "cpu", 20)
+    p1 = out_root / "phase1_input" / "traces_v2_devtest"
+    p1.mkdir(parents=True)
+    t_t = 0.0706
+    for split in ("dev", "devtest"):
+        traces = []
+        for r in res[split]:
+            n = len(r["out_ids"])
+            z = np.zeros(n, np.float32)
+            ids = np.asarray(r["out_ids"], np.int64)
+            traces.append(Trace(id=r["id"], n=n, target_ids=ids, draft_argmax=ids, H=z, top1=z + 1, top2=z, p_target=z + 1,
+                                p_space=z, p_punct=z, p_eos=z, p_newword=z, p_mark=z, p_cont=z,
+                                draft_topk_ids=r["topk_ids"], draft_topk_logp=r["topk_logp"],
+                                target_topk_ids=r["topk_ids"], target_topk_logp=r["topk_logp"],
+                                target_logp_of_draft_argmax=z))
+        save_traces(p1 / f"traces_{split}.npz", traces, dict(split=split, eos_ids=info["eos_ids"]))
+        with open(p1 / f"target_outputs_{split}.jsonl", "w", encoding="utf-8") as f:
+            for r in res[split]:
+                f.write(json.dumps(dict(id=r["id"], src=r["src"], prompt_ids=r["prompt_ids"], out_ids=r["out_ids"]),
+                                   ensure_ascii=False) + "\n")
+    (p1 / "timing.json").write_text(json.dumps(dict(t_target=t_t, t_draft=t_t * 0.3231, c=0.3231,
+                                                    t_target_verify={str(g): t_t * (1 + 0.01 * g) for g in range(1, 9)})))
+    cfg = dict(OUT_ROOT=str(out_root), SMOKE=True, GIT_HASH="smoke", MODELS=models, SOURCES=sources,
+               MAX_NEW=24, GEN_BATCH=2, VOCAB_MIN_COUNT=1, ARCH=dict(d=64, layers=1, nhead=2),
+               PRE_STEPS=20, FT_STEPS=20, INMODEL_STEPS=10, BATCH=16, N_AGREE=3, N_BOOT=50, TAUS=[0.0, 0.1, 0.5],
+               PHASE1_DIR=str(out_root / "phase1_input"), PHASE1_SEARCH=[], TARGET8B=["Qwen/Qwen2.5-0.5B-Instruct"],
+               COLLECT_8B_IF_MISSING=False, C_SENS=[0.0, 0.05], **phase1_constants(ROOT / "results" / "phase1"))
+    t0 = time.time()
+    out = week1_main(cfg)
+    print(f"week1 smoke run: {time.time() - t0:.0f}s, verdict {out['verdict']['decision']}")
+    rd = root / "results"
+    for f in ("collection_summary.csv", "agreement.csv", "lomo.csv", "lomo_sim.csv", "l8.csv", "l8_heads.csv",
+              "l8_tau.csv", "l8_sens.csv", "conv.csv", "nn_cov.csv", "verdict.json", "SUMMARY.md", "timing_head.json",
+              "vocab_coverage.csv", "run_info.json"):
+        assert (rd / f).exists(), f
+    import pandas as pd
+    l8 = pd.read_csv(rd / "l8.csv")
+    print(l8[["method", "speedup", "ci_lo", "ci_hi", "tokens_per_round"]].to_string())
+    meths = set(l8["method"])
+    for m in ("Entropy (Phase 1, 1B draft)", "Universal head, zero-shot (all small LLMs)",
+              "Text-only head, zero-shot (ablation: no distribution input)", "In-model head (8B dev only)",
+              "Truth units (upper bound of this head design)"):
+        assert m in meths, m
+    ent = l8.set_index("method").loc["Entropy (Phase 1, 1B draft)", "speedup"]
+    assert ent > 1.0                                    # fake traces: draft == target, every draft accepted
+    truth = l8.set_index("method").loc["Truth units (upper bound of this head design)"]
+    # tiny models write little real Hindi (low vocabulary coverage), so few positions have a draft;
+    # the drafts that exist must be accepted (only a longest level's final token may be rejected)
+    assert truth["acceptance"] > 0.85, truth["acceptance"]
+    conv = pd.read_csv(rd / "conv.csv")
+    print(conv.to_string())
+    tr = conv[(conv.method == "truth_units")]
+    assert (tr["failed"] <= 0.02 * tr["positions"]).all(), "truth-unit drafts should convert exactly"
+    with zipfile.ZipFile(out["results_zip"]) as z:
+        assert any(n.endswith("SUMMARY.md") for n in z.namelist())
+    # resume: a second call reuses everything
+    t1 = time.time()
+    week1_main(cfg)
+    print(f"resume run: {time.time() - t1:.0f}s")
+    print("week1 smoke test passed")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--part", choices=["01", "03"], required=True)
+    ap.add_argument("--part", choices=["01", "03", "w1"], required=True)
     ap.add_argument("--selected", default=None, help="selected_params.json (part 03; default: smoke params)")
     ap.add_argument("--noise", type=float, default=0.0, help="part 03: draft logit noise (exercise rejections)")
     a = ap.parse_args()
     if a.part == "01":
         part01()
+    elif a.part == "w1":
+        part_w1()
     else:
         part03(a.selected, a.noise)
 
