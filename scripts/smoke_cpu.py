@@ -273,12 +273,15 @@ def part_w1() -> None:
     week1_main(cfg)
     print(f"resume run: {time.time() - t1:.0f}s")
 
-    # Kaggle-style resume: a fresh session whose only input is a crashed run that had finished S1, S2 and one model
-    inp = out_root / "kaggle_input" / "mtp-final-boss" / "week1"
-    for rel in ("data/sources.json", "data/unit_vocab.json", "results/log.txt"):
-        (inp / rel).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(root / rel, inp / rel)
-    shutil.copytree(root / "data" / "smol135", inp / "data" / "smol135")
+    # Kaggle-style resume: a fresh session whose only input is a crashed run that had finished S1, S2 and one model,
+    # re-uploaded as a Dataset that stayed a .zip and has no week1/ folder inside (the hardest layout)
+    inp = out_root / "kaggle_input" / "old-week1-output"
+    inp.mkdir(parents=True, exist_ok=True)
+    keep = [root / "data" / "sources.json", root / "data" / "unit_vocab.json", root / "results" / "log.txt",
+            *[f for f in (root / "data" / "smol135").rglob("*") if f.is_file()]]
+    with zipfile.ZipFile(inp / "week1_output.zip", "w") as z:
+        for f in keep:
+            z.write(f, arcname=str(f.relative_to(root)))
     fresh = out_root / "fresh_session"
     t2 = time.time()
     week1_main(dict(cfg, OUT_ROOT=str(fresh), RESUME_FROM="auto", PHASE1_SEARCH=[str(out_root / "kaggle_input")]))

@@ -774,25 +774,69 @@ def write_report(cfg, root: Path, res: dict, agree: list, log) -> dict:
     return V
 
 
-def _resume_copy(src, root: Path, log):
-    src = Path(src)
-    for f in src.rglob("*"):
-        if f.is_file() and root.name in f.parts:
-            rel = Path(*f.parts[f.parts.index(root.name) + 1:])
-            dst = root / rel
-            if not dst.exists():
-                dst.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(f, dst)
-    log(f"resume: copied earlier outputs from {src}")
+def _resume_copy(run: Path, root: Path, log):
+    """Copy an earlier run folder (the one holding data/sources.json) into `root`, never overwriting."""
+    n_new = n_had = 0
+    for f in sorted(Path(run).rglob("*")):
+        if f.is_file():
+            dst = root / f.relative_to(run)
+            if dst.exists():
+                n_had += 1
+                continue
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, dst)
+            n_new += 1
+    models = sorted(p.name for p in (Path(run) / "data").iterdir() if p.is_dir())
+    log(f"resume: copied {n_new} files ({n_had} already present) from {run}; model folders: {models or 'none'}")
 
 
-def find_resume(cfg, root: Path) -> Path | None:
-    """RESUME_FROM="auto": the attached input that holds an earlier run's <RUN_NAME>/data/sources.json."""
-    for d in cfg["PHASE1_SEARCH"]:
-        if d and Path(d).exists():
-            hits = sorted(Path(d).rglob(f"{root.name}/data/sources.json"))
-            if hits:
-                return hits[0].parent.parent.parent
+def _unzip_safe(z: zipfile.ZipFile, dst: Path) -> None:
+    """extractall that also accepts backslash separators (Windows PowerShell's Compress-Archive)."""
+    for info in z.infolist():
+        name = info.filename.replace("\\", "/")
+        parts = [p for p in name.split("/") if p not in ("", ".")]
+        if name.endswith("/") or not parts or ".." in parts or ":" in parts[0]:
+            continue
+        out = dst.joinpath(*parts)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with z.open(info) as fi, open(out, "wb") as fo:
+            shutil.copyfileobj(fi, fo)
+
+
+def locate_run(paths, run_name: str) -> Path | None:
+    """An earlier run among `paths` (folders searched recursively, or .zip files): the folder holding
+    data/sources.json, whatever it is called. Handles a notebook output attached as input, a downloaded
+    output re-uploaded as a Dataset (unzipped by Kaggle or kept as a .zip) and zips without the run folder.
+    A zip is extracted to a temp folder. Prefers a folder named `run_name`, then the shallowest."""
+    import tempfile
+
+    def is_hit(n: str) -> bool:
+        n = n.replace("\\", "/")
+        return n == "data/sources.json" or n.endswith("/data/sources.json")
+
+    for d in paths:
+        if not d or not Path(d).exists():
+            continue
+        d = Path(d)
+        if d.is_dir():
+            runs = [p.parent.parent for p in d.rglob("sources.json") if p.parent.name == "data"]
+            if runs:
+                return min(runs, key=lambda r: (r.name != run_name, len(r.parts), str(r)))
+            zips = sorted(d.rglob("*.zip"))
+        else:
+            zips = [d] if d.suffix.lower() == ".zip" else []
+        for zp in zips:
+            try:
+                with zipfile.ZipFile(zp) as z:
+                    hits = [n.replace("\\", "/") for n in z.namelist() if is_hit(n)]
+                    if not hits:
+                        continue
+                    tmp = Path(tempfile.mkdtemp(prefix="lgmtp_resume_"))
+                    _unzip_safe(z, tmp)
+            except (zipfile.BadZipFile, OSError):
+                continue
+            best = min(hits, key=lambda n: (n.split("/")[-3:-2] != [run_name], n.count("/"), n))
+            return tmp / Path(best).parent.parent
     return None
 
 
@@ -803,12 +847,16 @@ def week1_main(cfg: dict) -> dict:
         (root / sub).mkdir(parents=True, exist_ok=True)
     log = Log(root / "results" / "log.txt")
     src = cfg["RESUME_FROM"]
-    if src == "auto":
-        src = find_resume(cfg, root)
-        if src is None:
-            log("resume: RESUME_FROM='auto' found no earlier run in the inputs; starting fresh")
     if src:
-        _resume_copy(src, root, log)
+        where = cfg["PHASE1_SEARCH"] if src == "auto" else [src]
+        run = locate_run(where, root.name)
+        if run is None:
+            if src != "auto":
+                raise FileNotFoundError(f"RESUME_FROM={src!r}: no earlier run (data/sources.json, as a folder or "
+                                        f"inside a .zip) found there")
+            log(f"resume: RESUME_FROM='auto' found no earlier run (data/sources.json) in {where}; starting fresh")
+        elif run.resolve() != root.resolve():
+            _resume_copy(run, root, log)
     try:
         return _week1_run(cfg, root, log)
     except BaseException as e:
