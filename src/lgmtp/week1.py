@@ -93,6 +93,25 @@ def _device():
     return "cuda:0" if torch.cuda.is_available() else "cpu"
 
 
+def _mem() -> str:
+    """Free RAM / GPU memory, for the log (a killed kernel leaves no traceback)."""
+    parts = []
+    try:
+        import psutil
+        vm = psutil.virtual_memory()
+        parts.append(f"RAM free {vm.available / 2**30:.1f}/{vm.total / 2**30:.0f} GB")
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        import torch
+        if torch.cuda.is_available():
+            f, t = torch.cuda.mem_get_info()
+            parts.append(f"GPU0 free {f / 2**30:.1f}/{t / 2**30:.0f} GB")
+    except Exception:  # noqa: BLE001
+        pass
+    return ", ".join(parts) or "memory n/a"
+
+
 def _md_table(rows: list[dict], cols: list[str], fmt: dict | None = None) -> str:
     fmt = fmt or {}
     out = ["| " + " | ".join(cols) + " |", "|" + "---|" * len(cols)]
@@ -163,22 +182,26 @@ def stage_collect(cfg, root: Path, S: dict, log, device) -> dict:
     for spec in cfg["MODELS"]:
         key = spec["key"]
         d = root / "data" / key
+        log(f"S3 collect: {key} ({_mem()})")
         try:
             res, info, _ = C.collect_model(spec, {s: _rows(S, s) for s in ("dev", "extra", "devtest")}, d,
                                            cfg["GEN_BATCH"], cfg["MAX_NEW"], device, cfg["TOPK"], log)
+            rows = []
+            for s, recs in res.items():
+                txt = "".join(r["out_text"] for r in recs)
+                deva = sum("ऀ" <= ch <= "ॿ" for ch in txt) / max(sum(not ch.isspace() for ch in txt), 1)
+                rows.append(dict(model=key, name=info["name"], split=s, n=len(recs), status="ok",
+                                 mean_tokens=float(np.mean([len(r["out_ids"]) for r in recs])) if recs else 0.0,
+                                 eos_rate=float(np.mean([r["eos_end"] for r in recs])) if recs else 0.0,
+                                 hit_max=int(sum(len(r["out_ids"]) >= cfg["MAX_NEW"] for r in recs)),
+                                 deva_frac=deva, tf_argmax=info.get("tf_argmax_agreement", {}).get(s, float("nan"))))
         except Exception as e:  # noqa: BLE001
             log(f"S3 collect: model {key} FAILED and is skipped: {type(e).__name__}: {str(e)[:300]}")
             summ.append(dict(model=key, status=f"failed: {type(e).__name__}"))
             continue
         out[key] = dict(records=res, info=info, spec=spec)
-        for s, recs in res.items():
-            txt = "".join(r["out_text"] for r in recs)
-            deva = sum("ऀ" <= ch <= "ॿ" for ch in txt) / max(sum(not ch.isspace() for ch in txt), 1)
-            summ.append(dict(model=key, name=info["name"], split=s, n=len(recs), status="ok",
-                             mean_tokens=float(np.mean([len(r["out_ids"]) for r in recs])) if recs else 0.0,
-                             eos_rate=float(np.mean([r["eos_end"] for r in recs])) if recs else 0.0,
-                             hit_max=int(sum(len(r["out_ids"]) >= cfg["MAX_NEW"] for r in recs)),
-                             deva_frac=deva, tf_argmax=info.get("tf_argmax_agreement", {}).get(s, float("nan"))))
+        summ.extend(rows)
+        log(f"S3 collect: {key} done ({_mem()})")
     _write_csv(root / "results" / "collection_summary.csv", summ)
     log(f"S3 collect: {len(out)} models ok: {list(out)}")
     return out
@@ -763,14 +786,43 @@ def _resume_copy(src, root: Path, log):
     log(f"resume: copied earlier outputs from {src}")
 
 
+def find_resume(cfg, root: Path) -> Path | None:
+    """RESUME_FROM="auto": the attached input that holds an earlier run's <RUN_NAME>/data/sources.json."""
+    for d in cfg["PHASE1_SEARCH"]:
+        if d and Path(d).exists():
+            hits = sorted(Path(d).rglob(f"{root.name}/data/sources.json"))
+            if hits:
+                return hits[0].parent.parent.parent
+    return None
+
+
 def week1_main(cfg: dict) -> dict:
     cfg = {**DEFAULT_W1, **cfg}
     root = Path(cfg["OUT_ROOT"]) / cfg["RUN_NAME"]
     for sub in ("data", "features", "heads", "preds", "results"):
         (root / sub).mkdir(parents=True, exist_ok=True)
     log = Log(root / "results" / "log.txt")
-    if cfg["RESUME_FROM"]:
-        _resume_copy(cfg["RESUME_FROM"], root, log)
+    src = cfg["RESUME_FROM"]
+    if src == "auto":
+        src = find_resume(cfg, root)
+        if src is None:
+            log("resume: RESUME_FROM='auto' found no earlier run in the inputs; starting fresh")
+    if src:
+        _resume_copy(src, root, log)
+    try:
+        return _week1_run(cfg, root, log)
+    except BaseException as e:
+        import traceback
+        log(f"FAILED: {type(e).__name__}: {e} ({_mem()})\n" + traceback.format_exc())
+        try:
+            _zip_tree(root / "results", Path(cfg["OUT_ROOT"]) / "week1_results.zip", root)
+            log("partial results zipped to week1_results.zip; attach this version's output and rerun to resume")
+        except Exception:  # noqa: BLE001
+            pass
+        raise
+
+
+def _week1_run(cfg: dict, root: Path, log) -> dict:
     device = "cpu" if cfg["SMOKE"] else _device()
     log(f"week1 start | device {device} | build {cfg['GIT_HASH']}")
     (root / "results" / "config.json").write_text(json.dumps({k: v for k, v in cfg.items() if k != "SOURCES"},

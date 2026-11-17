@@ -277,17 +277,21 @@ def save_topk(path, recs: list[dict], tk: list) -> None:
 
 def load_records(jsonl, topk_npz) -> list[dict]:
     recs = read_jsonl(jsonl)
-    z = np.load(topk_npz)
-    by = {int(r): i for i, r in enumerate(z["rec_ids"])}
+    # Read every array exactly once: each NpzFile[key] access decompresses the whole array again, and
+    # a per-record slice of it keeps that full copy alive (records x array size: the week-1 Kaggle OOM).
+    with np.load(topk_npz) as z:
+        rec_ids, offs = z["rec_ids"], z["offsets"]
+        ids_all, lp_all = z["topk_ids"], z["topk_logp"]
+    by = {int(r): i for i, r in enumerate(rec_ids)}
     out = []
     for r in recs:
         i = by.get(int(r["id"]))
         if i is None:
             continue
-        a, b = int(z["offsets"][i]), int(z["offsets"][i + 1])
+        a, b = int(offs[i]), int(offs[i + 1])
         if b - a != len(r["out_ids"]):
             continue
-        r["topk_ids"], r["topk_logp"] = z["topk_ids"][a:b], z["topk_logp"][a:b].astype(np.float32)
+        r["topk_ids"], r["topk_logp"] = ids_all[a:b], lp_all[a:b].astype(np.float32)
         out.append(r)
     return out
 

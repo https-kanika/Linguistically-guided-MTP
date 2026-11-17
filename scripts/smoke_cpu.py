@@ -272,6 +272,32 @@ def part_w1() -> None:
     t1 = time.time()
     week1_main(cfg)
     print(f"resume run: {time.time() - t1:.0f}s")
+
+    # Kaggle-style resume: a fresh session whose only input is a crashed run that had finished S1, S2 and one model
+    inp = out_root / "kaggle_input" / "mtp-final-boss" / "week1"
+    for rel in ("data/sources.json", "data/unit_vocab.json", "results/log.txt"):
+        (inp / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(root / rel, inp / rel)
+    shutil.copytree(root / "data" / "smol135", inp / "data" / "smol135")
+    fresh = out_root / "fresh_session"
+    t2 = time.time()
+    week1_main(dict(cfg, OUT_ROOT=str(fresh), RESUME_FROM="auto", PHASE1_SEARCH=[str(out_root / "kaggle_input")]))
+    new = (fresh / "week1" / "results" / "log.txt").read_text(encoding="utf-8").split("resume: copied")[-1]
+    assert "S1 sources: reused" in new and "S2 vocab: reused" in new, "sources / vocab must be reused"
+    assert "[smol135] split" not in new, "a finished model must not be regenerated"
+    assert "[qwen0.5] split dev" in new, "unfinished models must be collected"
+    assert (fresh / "week1_results.zip").exists()
+    print(f"auto-resume run: {time.time() - t2:.0f}s")
+
+    # a crash is logged with its traceback and the partial results are still zipped
+    crash = out_root / "crash_session"
+    try:
+        week1_main(dict(cfg, OUT_ROOT=str(crash), MODELS=[dict(key="nope", names=["no-such-org/no-such-model"])]))
+        raise AssertionError("expected a failure")
+    except RuntimeError as e:
+        assert "only 0 models collected" in str(e)
+    clog = (crash / "week1" / "results" / "log.txt").read_text(encoding="utf-8")
+    assert "FAILED: RuntimeError" in clog and "Traceback" in clog and (crash / "week1_results.zip").exists()
     print("week1 smoke test passed")
 
 

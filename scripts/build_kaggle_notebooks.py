@@ -278,7 +278,7 @@ What it does, end to end (details in `PLAN_phase2_indic_universal_mtp.md`, W1):
 
 **Outputs:** `/kaggle/working/week1_results.zip` (tables, `SUMMARY.md`, `verdict.json`, log) -> unzip into `results/week1/` in the repo. `/kaggle/working/week1_data.zip` (all collected outputs with top-20, trained heads) -> keep for weeks 2+.
 
-**If the run dies:** add the failed version's output as an input and set `RESUME_FROM` to its `/kaggle/input/...` path; finished stages are skipped."""),
+**If the run dies:** add the failed version's output as an input (*Add Input → Your Work → this notebook's output*) and run again. With `RESUME_FROM=\"auto\"` (the default) it finds that output, copies it into place and skips every finished stage and every finished model split. A crash writes its traceback to `results/log.txt` and still saves `week1_results.zip`."""),
         code(f"!pip -q install -U \"transformers=={TRANSFORMERS_PIN}\" accelerate datasets huggingface_hub regex"),
         code(inline_cell(srcs, build_id)),
         md("## CONFIG"),
@@ -295,7 +295,7 @@ CONFIG = dict(
     PHASE1_DIR=None,           # optional explicit path to the Phase-1 trace files
     C_HEAD=None,               # None = measured head latency / 8B step; or a number to override
     OUT_ROOT="/kaggle/working",
-    RESUME_FROM=None,          # e.g. "/kaggle/input/<earlier-version-output>"
+    RESUME_FROM="auto",        # "auto" = continue from an earlier run's output attached as input (if any); None = fresh
     GIT_HASH=LGMTP_BUILD,
 )
 # Phase-1 numbers embedded at build time (results/phase1/selected_params.json, main_table.csv, REPORT.md)
