@@ -368,8 +368,8 @@ except Exception as e:
 import torch, transformers
 print("torch", torch.__version__, "| transformers", transformers.__version__, "| GPUs", torch.cuda.device_count())"""),
         code("from lgmtp.drafter_tf import drafter_main\nRESULT = drafter_main(CONFIG)"),
-        code("import json\nprint(json.dumps({k: v for k, v in RESULT.items() if k != 'timing'}, indent=1))
-print(json.dumps(RESULT.get('timing', {}).get('c', {}), indent=1))"),
+        code("import json\nprint(json.dumps({k: v for k, v in RESULT.items() if k != 'timing'}, indent=1))\n"
+             "print(json.dumps(RESULT.get('timing', {}).get('c', {}), indent=1))"),
     ]
     nb.metadata.update({"kernelspec": {"name": "python3", "display_name": "Python 3", "language": "python"},
                         "lgmtp_build": build_id})
