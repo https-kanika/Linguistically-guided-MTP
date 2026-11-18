@@ -304,9 +304,55 @@ def part_w1() -> None:
     print("week1 smoke test passed")
 
 
+def part_dt() -> None:
+    """Notebook 06: draft-model teacher-forced pass over a week-1 run's target outputs, timing, zip.
+    The 'target' outputs are generated here by Qwen2.5-0.5B and the draft is the same model, so the draft
+    argmax must equal the target token almost everywhere: an exact check of the row alignment."""
+    import json
+    from lgmtp import collect as C
+    from lgmtp.drafter_tf import drafter_main
+    out_root = SMOKE_ROOT / "dt"
+    if out_root.exists():
+        shutil.rmtree(out_root)
+    name = "Qwen/Qwen2.5-0.5B-Instruct"
+    spec = dict(key="q", names=[name], dtype="fp32")
+    m, tok, _ = C.load_model(spec, "cpu")
+    rows = [(i, s) for i, s in enumerate(["The weather is nice today.", "India has many languages.",
+                                          "He went to the market to buy vegetables.", "Water boils at 100 degrees."])]
+    run = out_root / "kaggle_input" / "mtp-final-boss" / "week1"
+    d = run / "data" / "llama3-8b"
+    d.mkdir(parents=True)
+    (run / "data" / "sources.json").write_text("{}")
+    eos = C.model_eos_ids(m, tok, spec)
+    for split, rr in (("dev", rows[:2]), ("devtest", rows[2:])):
+        C.generate(m, tok, spec, rr, d / f"{split}.jsonl", 2, 16, "cpu", set(eos), print)
+    (d / "timing.json").write_text(json.dumps(dict(t_target=0.07)))
+    del m
+    cfg = dict(DRAFT=[name], TARGET_TOKENIZER=[name], SEARCH=[str(out_root / "kaggle_input")],
+               OUT_ROOT=str(out_root / "working"), TIME_Q=[1, 4], TIME_CTX=[32], TIME_STEPS=2, TIME_REPS=1, SMOKE=True)
+    t0 = time.time()
+    s = drafter_main(cfg)
+    print(json.dumps(s["splits"], indent=1))
+    for split, v in s["splits"].items():
+        assert v["positions"] > 0 and v["draft_target_agreement"] > 0.97, f"{split}: rows misaligned? {v}"
+    with np.load(out_root / "working" / "drafter_traces" / "devtest.npz") as z:
+        assert z["d_topk_ids"].shape == (len(z["target_ids"]), 20) and len(z["d_H"]) == len(z["target_ids"])
+        assert z["offsets"][-1] == len(z["target_ids"])
+    c = s["timing"]["c"]["32"]
+    assert set(c) == {"1", "4"} and all(v > 0 for v in c.values())
+    with zipfile.ZipFile(out_root / "working" / "drafter_traces.zip") as z:
+        names = set(z.namelist())
+    assert {"dev.npz", "devtest.npz", "devtest.jsonl", "timing.json", "summary.json"} <= names, names
+    t1 = time.time()
+    drafter_main(cfg)                                   # resume: everything reused
+    log = (out_root / "working" / "drafter_traces" / "log.txt").read_text(encoding="utf-8")
+    assert log.count("dev: reused") == 1 and "timing: reused" in log
+    print(f"drafter smoke test passed ({t1 - t0:.0f}s, resume {time.time() - t1:.0f}s)")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--part", choices=["01", "03", "w1"], required=True)
+    ap.add_argument("--part", choices=["01", "03", "w1", "dt"], required=True)
     ap.add_argument("--selected", default=None, help="selected_params.json (part 03; default: smoke params)")
     ap.add_argument("--noise", type=float, default=0.0, help="part 03: draft logit noise (exercise rejections)")
     a = ap.parse_args()
@@ -314,6 +360,8 @@ def main() -> None:
         part01()
     elif a.part == "w1":
         part_w1()
+    elif a.part == "dt":
+        part_dt()
     else:
         part03(a.selected, a.noise)
 

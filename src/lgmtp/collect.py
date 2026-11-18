@@ -220,10 +220,11 @@ def _logits_budget_rows(V: int, L: int, bytes_per: int, budget: float = 2.5e9) -
 
 
 def teacher_forced_topk(model, recs: list[dict], device: str, k: int = 20, log=print,
-                        ids_key: str = "out_ids", argmax_only: bool = False):
+                        ids_key: str = "out_ids", argmax_only: bool = False, with_entropy: bool = False):
     """Top-k log-probs of q_t for every output position t of every record (prompt_ids + out ids),
     batched with left padding, explicit position ids and only the output rows of the logits.
-    Returns list of (ids [n,k] int32, logp [n,k] float16) or list of argmax arrays."""
+    Returns list of (ids [n,k] int32, logp [n,k] float16), or with ``with_entropy`` list of
+    (ids, logp, H [n] float32, the full-distribution entropy in nats), or list of argmax arrays."""
     torch = _torch()
     V = model.get_output_embeddings().weight.shape[0]
     bpe = 4 if next(model.parameters()).dtype == torch.float32 else 2
@@ -260,6 +261,9 @@ def teacher_forced_topk(model, recs: list[dict], device: str, k: int = 20, log=p
                     lp = torch.log_softmax(rowlg, -1)
                     tk = lp.topk(k, -1)
                     res[c] = (tk.indices.cpu().numpy().astype(np.int32), tk.values.cpu().numpy().astype(np.float16))
+                    if with_entropy:
+                        H = -(lp.exp() * lp).sum(-1)
+                        res[c] = res[c] + (H.cpu().numpy().astype(np.float32),)
         del lg
         i += len(chunk)
     return res
