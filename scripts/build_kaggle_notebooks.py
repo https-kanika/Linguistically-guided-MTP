@@ -346,7 +346,7 @@ Replaces the lost Phase-1 traces with exactly what the simulation needs:
 
 **Settings:** GPU (one T4 is enough), Internet on, secret `HF_TOKEN` (for `meta-llama/Llama-3.2-1B-Instruct`; without it the ungated `unsloth` copy is used). **Run:** *Save Version → Save & Run All*. About 10-20 min.
 
-**Output:** `/kaggle/working/drafter_traces.zip` → download and unzip into `E:\MTP\drafter_traces`. If the run dies, attach its output too and rerun: finished splits and the timing are reused."""),
+**Output:** `/kaggle/working/drafter_traces.zip` → download and unzip into `E:/MTP/drafter_traces`. If the run dies, attach its output too and rerun: finished splits and the timing are reused."""),
         code(f"!pip -q install -U \"transformers=={TRANSFORMERS_PIN}\" accelerate huggingface_hub regex"),
         code(inline_cell(srcs, build_id)),
         md("## CONFIG"),
@@ -367,10 +367,8 @@ except Exception as e:
     print(f"No HF_TOKEN ({e}); the ungated unsloth copy of Llama-3.2-1B will be used")
 import torch, transformers
 print("torch", torch.__version__, "| transformers", transformers.__version__, "| GPUs", torch.cuda.device_count())"""),
-        code("from lgmtp.drafter_tf import drafter_main
-RESULT = drafter_main(CONFIG)"),
-        code("import json
-print(json.dumps({k: v for k, v in RESULT.items() if k != 'timing'}, indent=1))
+        code("from lgmtp.drafter_tf import drafter_main\nRESULT = drafter_main(CONFIG)"),
+        code("import json\nprint(json.dumps({k: v for k, v in RESULT.items() if k != 'timing'}, indent=1))
 print(json.dumps(RESULT.get('timing', {}).get('c', {}), indent=1))"),
     ]
     nb.metadata.update({"kernelspec": {"name": "python3", "display_name": "Python 3", "language": "python"},
