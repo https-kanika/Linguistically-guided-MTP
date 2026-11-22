@@ -1,0 +1,7 @@
+target,method,positions,levels,anchored,fallback,failed,empty
+llama3-8b,truth_units,58160,165016,55748,48,0,2364
+llama3-8b,zeroshot_all,62228,185434,58001,2956,52,1219
+llama3-8b,textonly_all,62228,185455,56929,4049,49,1201
+llama3-8b,zeroshot_nollama,62228,185344,55364,5596,49,1219
+llama3-8b,inmodel_ft,62228,185542,59333,1710,48,1137
+llama3-8b,inmodel_own,62228,185544,59416,1633,50,1129

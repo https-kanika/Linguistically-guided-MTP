@@ -1,0 +1,366 @@
+[   0.0m] week1 start | device cuda:0 | build git=084f0b393d65 src+consts_sha256=9edef7037800
+[  24.5m] S1 sources: dev 997, devtest 1012, extra 3000, mono 200000
+[  24.6m] S2 vocab: {'texts': 200000, 'unit_tokens': 4686855, 'unit_types': 142370, 'vocab': 47834, 'train_coverage': 0.9757517567750655}
+[  25.1m] [qwen2.5-1.5b] split dev: 997 sources
+[  25.1m]   generate: 0 done, 997 to go
+[  25.3m]   first batch 12.0s -> ESTIMATE ~6.2 min for this split
+[  31.2m]   997 outputs; 189 hit MAX_NEW; mean len 145.9 tokens
+[  32.0m]   teacher-forced argmax == generated token: 0.9979  (414s)
+[  32.0m] [qwen2.5-1.5b] split extra: 3000 sources
+[  32.0m]   generate: 0 done, 3000 to go
+[  32.1m]   first batch 3.1s -> ESTIMATE ~4.9 min for this split
+[  50.1m]   3000 outputs; 543 hit MAX_NEW; mean len 125.0 tokens
+[  52.2m]   teacher-forced argmax == generated token: 0.9976  (1210s)
+[  52.2m] [qwen2.5-1.5b] split devtest: 1012 sources
+[  52.2m]   generate: 0 done, 1012 to go
+[  52.4m]   first batch 11.4s -> ESTIMATE ~6.0 min for this split
+[  58.3m]   1012 outputs; 226 hit MAX_NEW; mean len 150.5 tokens
+[  59.1m]   teacher-forced argmax == generated token: 0.9978  (416s)
+[   0.0m] resume: copied 12 files (0 already present) from /kaggle/input/datasets/rakshitsawarniitb/mtp-finalboss-output/week1; model folders: ['qwen2.5-1.5b']
+[   0.0m] week1 start | device cuda:0 | build git=9f1203decd0b src+consts_sha256=d875cf2683fc
+[   0.1m] S1 sources: reused sources.json (dev 997, devtest 1012, extra 3000, mono 200000)
+[   0.1m] S2 vocab: reused (47834 units)
+[   0.1m] S3 collect: qwen2.5-1.5b (RAM free 29.5/31 GB, GPU0 free 14.5/15 GB)
+[   0.1m] S3 collect: qwen2.5-1.5b done (RAM free 29.4/31 GB, GPU0 free 14.5/15 GB)
+[   0.1m] S3 collect: gemma3-1b (RAM free 29.4/31 GB, GPU0 free 14.5/15 GB)
+[   0.6m] [gemma3-1b] split dev: 997 sources
+[   0.6m]   generate: 0 done, 997 to go
+[   0.8m]   first batch 14.7s -> ESTIMATE ~7.7 min for this split
+[   2.7m]   997 outputs; 1 hit MAX_NEW; mean len 34.3 tokens
+[   3.7m]   teacher-forced argmax == generated token: 1.0000  (185s)
+[   3.7m] [gemma3-1b] split extra: 3000 sources
+[   3.7m]   generate: 0 done, 3000 to go
+[   3.8m]   first batch 10.3s -> ESTIMATE ~16.1 min for this split
+[   9.1m]   3000 outputs; 3 hit MAX_NEW; mean len 28.3 tokens
+[  11.6m]   teacher-forced argmax == generated token: 1.0000  (479s)
+[  11.7m] [gemma3-1b] split devtest: 1012 sources
+[  11.7m]   generate: 0 done, 1012 to go
+[  11.7m]   first batch 2.0s -> ESTIMATE ~1.1 min for this split
+[  13.7m]   1012 outputs; 1 hit MAX_NEW; mean len 35.0 tokens
+[  14.7m]   teacher-forced argmax == generated token: 0.9876  (183s)
+[  14.7m] S3 collect: gemma3-1b done (RAM free 26.3/31 GB, GPU0 free 14.4/15 GB)
+[  14.7m] S3 collect: llama3.2-1b (RAM free 26.3/31 GB, GPU0 free 14.4/15 GB)
+[  15.1m] [llama3.2-1b] split dev: 997 sources
+[  15.1m]   generate: 0 done, 997 to go
+[  15.2m]   first batch 4.1s -> ESTIMATE ~2.1 min for this split
+[  18.5m]   997 outputs; 16 hit MAX_NEW; mean len 72.8 tokens
+[  18.9m]   teacher-forced argmax == generated token: 0.9980  (229s)
+[  18.9m] [llama3.2-1b] split extra: 3000 sources
+[  18.9m]   generate: 0 done, 3000 to go
+[  19.0m]   first batch 2.2s -> ESTIMATE ~3.4 min for this split
+[  30.0m]   3000 outputs; 67 hit MAX_NEW; mean len 63.0 tokens
+[  31.2m]   teacher-forced argmax == generated token: 0.9982  (739s)
+[  31.2m] [llama3.2-1b] split devtest: 1012 sources
+[  31.2m]   generate: 0 done, 1012 to go
+[  31.3m]   first batch 2.2s -> ESTIMATE ~1.2 min for this split
+[  34.3m]   1012 outputs; 13 hit MAX_NEW; mean len 75.6 tokens
+[  34.8m]   teacher-forced argmax == generated token: 0.9984  (214s)
+[  34.8m] S3 collect: llama3.2-1b done (RAM free 26.2/31 GB, GPU0 free 14.4/15 GB)
+[  34.8m] S3 collect: sarvam1 (RAM free 26.2/31 GB, GPU0 free 14.4/15 GB)
+[  35.4m] [sarvam1] split dev: 997 sources
+[  35.4m]   generate: 0 done, 997 to go
+[  35.7m]   first batch 17.6s -> ESTIMATE ~9.1 min for this split
+[  45.2m]   997 outputs; 7 hit MAX_NEW; mean len 32.7 tokens
+[  45.9m]   teacher-forced argmax == generated token: 0.9606  (627s)
+[  45.9m] [sarvam1] split extra: 3000 sources
+[  45.9m]   generate: 0 done, 3000 to go
+[  46.2m]   first batch 17.3s -> ESTIMATE ~27.0 min for this split
+[  74.9m]   3000 outputs; 48 hit MAX_NEW; mean len 30.6 tokens
+[  76.7m]   teacher-forced argmax == generated token: 0.9508  (1850s)
+[  76.7m] [sarvam1] split devtest: 1012 sources
+[  76.7m]   generate: 0 done, 1012 to go
+[  77.0m]   first batch 17.7s -> ESTIMATE ~9.3 min for this split
+[  86.7m]   1012 outputs; 13 hit MAX_NEW; mean len 34.3 tokens
+[  87.3m]   teacher-forced argmax == generated token: 0.9614  (637s)
+[  87.3m] S3 collect: sarvam1 done (RAM free 26.0/31 GB, GPU0 free 14.4/15 GB)
+[  87.4m] S3 collect: 4 models ok: ['qwen2.5-1.5b', 'gemma3-1b', 'llama3.2-1b', 'sarvam1']
+[  87.4m] S4: Phase-1 traces not attached -> collecting Llama-3-8B outputs here (slow, ~2-3 h on 2xT4)
+[  89.6m] [llama3-8b] split dev: 997 sources
+[  89.6m]   generate: 0 done, 997 to go
+[  89.7m]   first batch 3.4s -> ESTIMATE ~3.5 min for this split
+[  98.4m]   997 outputs; 1 hit MAX_NEW; mean len 63.4 tokens
+[ 100.2m]   teacher-forced argmax == generated token: 0.9991  (635s)
+[ 100.2m] [llama3-8b] split devtest: 1012 sources
+[ 100.2m]   generate: 0 done, 1012 to go
+[ 100.2m]   first batch 3.6s -> ESTIMATE ~3.8 min for this split
+[ 109.0m]   1012 outputs; 0 hit MAX_NEW; mean len 65.3 tokens
+[ 110.8m]   teacher-forced argmax == generated token: 0.9993  (638s)
+[ 113.3m] S4: 8B data from fresh; splits ['dev', 'devtest']; tokenizer NousResearch/Meta-Llama-3-8B-Instruct; t_target 71.0 ms
+[ 114.5m] S6 features qwen2.5-1.5b/train: 499171 positions (67s)
+[ 114.5m] S6 features qwen2.5-1.5b/val: 21466 positions (3s)
+[ 114.9m] S6 features qwen2.5-1.5b/test: 152347 positions (21s)
+[ 115.1m] S6 features gemma3-1b/train: 114057 positions (6s)
+[ 115.1m] S6 features gemma3-1b/val: 4991 positions (0s)
+[ 115.1m] S6 features gemma3-1b/test: 35387 positions (2s)
+[ 115.3m] S6 features llama3.2-1b/train: 250962 positions (10s)
+[ 115.3m] S6 features llama3.2-1b/val: 10552 positions (0s)
+[ 115.4m] S6 features llama3.2-1b/test: 76461 positions (3s)
+[ 115.5m] S6 features sarvam1/train: 119768 positions (7s)
+[ 115.5m] S6 features sarvam1/val: 4640 positions (0s)
+[ 115.6m] S6 features sarvam1/test: 34755 positions (2s)
+[ 115.6m] S6 features llama3-8b/train: 63244 positions
+[ 115.7m] S6 features llama3-8b/test: 66069 positions
+[ 116.5m] S6 features mono: 1535583 positions
+[ 117.1m] S5 agree: qwen2.5-1.5b on qwen2.5-1.5b's text: start 0.997 cont 0.999 unit 0.992 unit|start 0.995
+[ 117.3m] S5 agree: qwen2.5-1.5b on gemma3-1b's text: start 0.620 cont 0.759 unit 0.385 unit|start 0.622
+[ 117.4m] S5 agree: qwen2.5-1.5b on llama3.2-1b's text: start 0.652 cont 0.768 unit 0.396 unit|start 0.607
+[ 117.6m] S5 agree: qwen2.5-1.5b on sarvam1's text: start 0.672 cont 0.775 unit 0.453 unit|start 0.674
+[ 117.7m] S5 agree: qwen2.5-1.5b on llama3-8b's text: start 0.657 cont 0.766 unit 0.394 unit|start 0.600
+[ 118.1m] S5 agree: gemma3-1b on qwen2.5-1.5b's text: start 0.461 cont 0.477 unit 0.458 unit|start 0.993
+[ 118.3m] S5 agree: gemma3-1b on gemma3-1b's text: start 0.982 cont 0.956 unit 0.977 unit|start 0.996
+[ 118.6m] S5 agree: gemma3-1b on llama3.2-1b's text: start 0.522 cont 0.612 unit 0.513 unit|start 0.984
+[ 118.8m] S5 agree: gemma3-1b on sarvam1's text: start 0.637 cont 0.782 unit 0.628 unit|start 0.985
+[ 119.0m] S5 agree: gemma3-1b on llama3-8b's text: start 0.577 cont 0.663 unit 0.566 unit|start 0.982
+[ 119.3m] S5 agree: llama3.2-1b on qwen2.5-1.5b's text: start 0.518 cont 0.722 unit 0.435 unit|start 0.840
+[ 119.4m] S5 agree: llama3.2-1b on gemma3-1b's text: start 0.587 cont 0.805 unit 0.467 unit|start 0.795
+[ 119.5m] S5 agree: llama3.2-1b on llama3.2-1b's text: start 0.998 cont 0.998 unit 0.996 unit|start 0.998
+[ 119.6m] S5 agree: llama3.2-1b on sarvam1's text: start 0.626 cont 0.864 unit 0.552 unit|start 0.882
+[ 119.7m] S5 agree: llama3.2-1b on llama3-8b's text: start 0.643 cont 0.815 unit 0.524 unit|start 0.815
+[ 120.1m] S5 agree: sarvam1 on qwen2.5-1.5b's text: start 0.464 cont 0.543 unit 0.460 unit|start 0.993
+[ 120.2m] S5 agree: sarvam1 on gemma3-1b's text: start 0.650 cont 0.743 unit 0.617 unit|start 0.948
+[ 120.4m] S5 agree: sarvam1 on llama3.2-1b's text: start 0.529 cont 0.675 unit 0.521 unit|start 0.985
+[ 120.6m] S5 agree: sarvam1 on sarvam1's text: start 0.997 cont 0.996 unit 0.996 unit|start 0.999
+[ 120.7m] S5 agree: sarvam1 on llama3-8b's text: start 0.597 cont 0.746 unit 0.589 unit|start 0.987
+[ 120.7m]   S7 pretrain (text only, Hindi corpus): training 3000 steps on 1518949 positions (cands=False)
+[ 121.5m]   step 300/3000 loss 16.617 loss1=3.130 acc1=0.444 loss2=6.576 acc2=0.095 loss3=6.589 acc3=0.123 (48s)
+[ 122.3m]   step 600/3000 loss 15.430 loss1=3.006 acc1=0.462 loss2=6.145 acc2=0.119 loss3=6.161 acc3=0.141 (97s)
+[ 123.2m]   step 900/3000 loss 15.742 loss1=2.927 acc1=0.470 loss2=6.001 acc2=0.134 loss3=5.963 acc3=0.156 (145s)
+[ 124.0m]   step 1200/3000 loss 13.676 loss1=2.892 acc1=0.476 loss2=5.825 acc2=0.148 loss3=5.825 acc3=0.166 (196s)
+[ 124.8m]   step 1500/3000 loss 14.022 loss1=2.883 acc1=0.474 loss2=5.687 acc2=0.155 loss3=5.736 acc3=0.171 (245s)
+[ 125.6m]   step 1800/3000 loss 14.667 loss1=2.833 acc1=0.481 loss2=5.622 acc2=0.162 loss3=5.645 acc3=0.176 (295s)
+[ 126.5m]   step 2100/3000 loss 14.214 loss1=2.762 acc1=0.487 loss2=5.538 acc2=0.173 loss3=5.572 acc3=0.179 (344s)
+[ 127.3m]   step 2400/3000 loss 13.632 loss1=2.783 acc1=0.491 loss2=5.495 acc2=0.171 loss3=5.526 acc3=0.182 (394s)
+[ 128.1m]   step 2700/3000 loss 14.101 loss1=2.763 acc1=0.488 loss2=5.458 acc2=0.171 loss3=5.516 acc3=0.184 (444s)
+[ 129.0m]   step 3000/3000 loss 13.723 loss1=2.744 acc1=0.493 loss2=5.472 acc2=0.176 loss3=5.504 acc3=0.189 (493s)
+[ 129.0m]   val: {"loss1": 2.8029, "acc1": 0.4883, "loss2": 5.5903, "acc2": 0.1667, "loss3": 5.7177, "acc3": 0.1775}
+[ 129.1m] S7 head latency: 5.24 ms GPU + 0.47 ms CPU -> c_head = 0.0803 (used 0.0803); params 14594778
+[ 129.1m]   S8 fold qwen2.5-1.5b / zeroshot: training 4000 steps on 468367 positions (cands=True)
+[ 130.8m]   step 400/4000 loss 10.806 loss1=1.022 acc1=0.776 loss2=4.629 acc2=0.238 loss3=4.709 acc3=0.236 (102s)
+[ 132.5m]   step 800/4000 loss 9.303 loss1=0.933 acc1=0.787 loss2=4.304 acc2=0.269 loss3=4.429 acc3=0.258 (203s)
+[ 134.1m]   step 1200/4000 loss 9.564 loss1=0.886 acc1=0.792 loss2=4.119 acc2=0.282 loss3=4.252 acc3=0.271 (305s)
+[ 135.8m]   step 1600/4000 loss 9.011 loss1=0.837 acc1=0.797 loss2=3.964 acc2=0.300 loss3=4.096 acc3=0.282 (407s)
+[ 137.5m]   step 2000/4000 loss 8.258 loss1=0.815 acc1=0.804 loss2=3.825 acc2=0.315 loss3=3.984 acc3=0.295 (509s)
+[ 139.2m]   step 2400/4000 loss 8.115 loss1=0.775 acc1=0.812 loss2=3.729 acc2=0.322 loss3=3.897 acc3=0.303 (610s)
+[ 140.9m]   step 2800/4000 loss 8.109 loss1=0.752 acc1=0.817 loss2=3.698 acc2=0.329 loss3=3.853 acc3=0.303 (712s)
+[ 142.6m]   step 3200/4000 loss 8.395 loss1=0.749 acc1=0.819 loss2=3.650 acc2=0.336 loss3=3.801 acc3=0.311 (815s)
+[ 144.3m]   step 3600/4000 loss 8.346 loss1=0.748 acc1=0.820 loss2=3.595 acc2=0.342 loss3=3.765 acc3=0.313 (917s)
+[ 146.0m]   step 4000/4000 loss 8.200 loss1=0.749 acc1=0.821 loss2=3.600 acc2=0.341 loss3=3.766 acc3=0.319 (1019s)
+[ 146.1m]   val: {"loss1": 1.0602, "acc1": 0.7782, "loss2": 4.985, "acc2": 0.2432, "loss3": 4.9891, "acc3": 0.2466}
+[ 147.1m]   S8 fold qwen2.5-1.5b / textonly: training 4000 steps on 468367 positions (cands=False)
+[ 148.4m]   step 400/4000 loss 10.747 loss1=1.020 acc1=0.777 loss2=4.625 acc2=0.238 loss3=4.706 acc3=0.238 (78s)
+[ 149.7m]   step 800/4000 loss 9.316 loss1=0.936 acc1=0.786 loss2=4.307 acc2=0.269 loss3=4.429 acc3=0.259 (156s)
+[ 151.0m]   step 1200/4000 loss 9.607 loss1=0.886 acc1=0.792 loss2=4.127 acc2=0.280 loss3=4.260 acc3=0.271 (233s)
+[ 152.3m]   step 1600/4000 loss 9.116 loss1=0.845 acc1=0.797 loss2=3.988 acc2=0.296 loss3=4.110 acc3=0.279 (311s)
+[ 153.6m]   step 2000/4000 loss 8.308 loss1=0.825 acc1=0.804 loss2=3.851 acc2=0.309 loss3=3.995 acc3=0.292 (389s)
+[ 154.9m]   step 2400/4000 loss 8.154 loss1=0.786 acc1=0.810 loss2=3.761 acc2=0.313 loss3=3.917 acc3=0.300 (467s)
+[ 156.2m]   step 2800/4000 loss 8.141 loss1=0.761 acc1=0.816 loss2=3.737 acc2=0.322 loss3=3.875 acc3=0.300 (545s)
+[ 157.5m]   step 3200/4000 loss 8.504 loss1=0.760 acc1=0.818 loss2=3.693 acc2=0.329 loss3=3.827 acc3=0.306 (623s)
+[ 158.8m]   step 3600/4000 loss 8.434 loss1=0.760 acc1=0.817 loss2=3.636 acc2=0.335 loss3=3.787 acc3=0.311 (701s)
+[ 160.1m]   step 4000/4000 loss 8.254 loss1=0.762 acc1=0.818 loss2=3.636 acc2=0.335 loss3=3.787 acc3=0.317 (779s)
+[ 160.1m]   val: {"loss1": 1.0879, "acc1": 0.7712, "loss2": 5.0462, "acc2": 0.2349, "loss3": 5.0217, "acc3": 0.243}
+[ 160.8m]   S8 fold qwen2.5-1.5b / inmodel: training 3000 steps on 493966 positions (cands=True)
+[ 162.0m]   step 300/3000 loss 10.041 loss1=1.906 acc1=0.591 loss2=4.282 acc2=0.263 loss3=4.228 acc3=0.282 (69s)
+[ 163.1m]   step 600/3000 loss 9.523 loss1=1.776 acc1=0.610 loss2=3.802 acc2=0.313 loss3=3.767 acc3=0.330 (138s)
+[ 164.3m]   step 900/3000 loss 8.857 loss1=1.690 acc1=0.624 loss2=3.563 acc2=0.339 loss3=3.585 acc3=0.341 (207s)
+[ 165.4m]   step 1200/3000 loss 8.714 loss1=1.552 acc1=0.646 loss2=3.413 acc2=0.356 loss3=3.434 acc3=0.357 (276s)
+[ 166.6m]   step 1500/3000 loss 8.395 loss1=1.520 acc1=0.649 loss2=3.288 acc2=0.366 loss3=3.282 acc3=0.372 (345s)
+[ 167.7m]   step 1800/3000 loss 8.182 loss1=1.493 acc1=0.658 loss2=3.170 acc2=0.381 loss3=3.180 acc3=0.389 (414s)
+[ 168.9m]   step 2100/3000 loss 7.497 loss1=1.455 acc1=0.665 loss2=3.049 acc2=0.397 loss3=3.103 acc3=0.399 (483s)
+[ 170.0m]   step 2400/3000 loss 7.485 loss1=1.424 acc1=0.672 loss2=3.026 acc2=0.399 loss3=3.061 acc3=0.404 (552s)
+[ 171.2m]   step 2700/3000 loss 8.023 loss1=1.447 acc1=0.665 loss2=3.007 acc2=0.401 loss3=3.027 acc3=0.409 (622s)
+[ 172.3m]   step 3000/3000 loss 7.868 loss1=1.439 acc1=0.671 loss2=2.972 acc2=0.407 loss3=3.049 acc3=0.402 (691s)
+[ 172.4m]   val: {"loss1": 2.0366, "acc1": 0.5867, "loss2": 5.0475, "acc2": 0.2296, "loss3": 4.8781, "acc3": 0.2452}
+[ 174.0m] S8 fold qwen2.5-1.5b: zeroshot 1.592x (1.82 tok/round); textonly 1.613x (1.84 tok/round); inmodel 1.945x (2.25 tok/round); truth_units 4.781x (5.39 tok/round); pld 1.459x (1.53 tok/round); logitspec 1.023x (1.05 tok/round)
+[ 174.0m]   S8 fold gemma3-1b / zeroshot: training 4000 steps on 851663 positions (cands=True)
+[ 175.7m]   step 400/4000 loss 10.410 loss1=1.635 acc1=0.650 loss2=4.492 acc2=0.255 loss3=4.499 acc3=0.264 (101s)
+[ 177.4m]   step 800/4000 loss 10.706 loss1=1.556 acc1=0.660 loss2=4.139 acc2=0.285 loss3=4.194 acc3=0.290 (201s)
+[ 179.1m]   step 1200/4000 loss 9.555 loss1=1.464 acc1=0.672 loss2=3.981 acc2=0.299 loss3=4.052 acc3=0.300 (303s)
+[ 180.8m]   step 1600/4000 loss 8.804 loss1=1.393 acc1=0.687 loss2=3.838 acc2=0.316 loss3=3.902 acc3=0.311 (405s)
+[ 182.5m]   step 2000/4000 loss 9.019 loss1=1.342 acc1=0.693 loss2=3.693 acc2=0.330 loss3=3.757 acc3=0.324 (507s)
+[ 184.2m]   step 2400/4000 loss 8.670 loss1=1.288 acc1=0.705 loss2=3.635 acc2=0.330 loss3=3.705 acc3=0.330 (610s)
+[ 185.9m]   step 2800/4000 loss 8.328 loss1=1.265 acc1=0.708 loss2=3.532 acc2=0.339 loss3=3.628 acc3=0.334 (712s)
+[ 187.6m]   step 3200/4000 loss 8.801 loss1=1.251 acc1=0.708 loss2=3.521 acc2=0.344 loss3=3.604 acc3=0.340 (815s)
+[ 189.3m]   step 3600/4000 loss 8.679 loss1=1.224 acc1=0.713 loss2=3.470 acc2=0.352 loss3=3.584 acc3=0.344 (916s)
+[ 191.0m]   step 4000/4000 loss 8.203 loss1=1.252 acc1=0.715 loss2=3.464 acc2=0.356 loss3=3.581 acc3=0.349 (1019s)
+[ 191.2m]   val: {"loss1": 1.6869, "acc1": 0.65, "loss2": 4.9213, "acc2": 0.2342, "loss3": 4.8368, "acc3": 0.2456}
+[ 191.7m]   S8 fold gemma3-1b / textonly: training 4000 steps on 851663 positions (cands=False)
+[ 193.0m]   step 400/4000 loss 10.342 loss1=1.636 acc1=0.649 loss2=4.491 acc2=0.254 loss3=4.497 acc3=0.266 (78s)
+[ 194.3m]   step 800/4000 loss 10.707 loss1=1.564 acc1=0.656 loss2=4.144 acc2=0.284 loss3=4.196 acc3=0.290 (156s)
+[ 195.6m]   step 1200/4000 loss 9.573 loss1=1.485 acc1=0.669 loss2=3.996 acc2=0.296 loss3=4.071 acc3=0.299 (235s)
+[ 196.9m]   step 1600/4000 loss 8.876 loss1=1.434 acc1=0.677 loss2=3.864 acc2=0.313 loss3=3.937 acc3=0.309 (313s)
+[ 198.2m]   step 2000/4000 loss 9.180 loss1=1.395 acc1=0.683 loss2=3.731 acc2=0.324 loss3=3.798 acc3=0.321 (391s)
+[ 199.5m]   step 2400/4000 loss 8.805 loss1=1.352 acc1=0.691 loss2=3.674 acc2=0.326 loss3=3.752 acc3=0.328 (469s)
+[ 200.8m]   step 2800/4000 loss 8.397 loss1=1.319 acc1=0.699 loss2=3.583 acc2=0.336 loss3=3.686 acc3=0.332 (547s)
+[ 202.1m]   step 3200/4000 loss 9.010 loss1=1.301 acc1=0.699 loss2=3.564 acc2=0.342 loss3=3.662 acc3=0.335 (626s)
+[ 203.4m]   step 3600/4000 loss 8.839 loss1=1.281 acc1=0.702 loss2=3.520 acc2=0.345 loss3=3.641 acc3=0.340 (704s)
+[ 204.7m]   step 4000/4000 loss 8.352 loss1=1.306 acc1=0.704 loss2=3.522 acc2=0.350 loss3=3.642 acc3=0.342 (782s)
+[ 204.8m]   val: {"loss1": 1.7347, "acc1": 0.6421, "loss2": 4.9552, "acc2": 0.2304, "loss3": 4.873, "acc3": 0.2422}
+[ 205.2m]   S8 fold gemma3-1b / inmodel: training 3000 steps on 110670 positions (cands=True)
+[ 206.3m]   step 300/3000 loss 10.413 loss1=0.543 acc1=0.891 loss2=4.774 acc2=0.223 loss3=4.818 acc3=0.222 (69s)
+[ 207.5m]   step 600/3000 loss 9.570 loss1=0.437 acc1=0.907 loss2=4.320 acc2=0.263 loss3=4.387 acc3=0.250 (138s)
+[ 208.6m]   step 900/3000 loss 8.222 loss1=0.392 acc1=0.915 loss2=4.012 acc2=0.291 loss3=4.105 acc3=0.276 (207s)
+[ 209.8m]   step 1200/3000 loss 8.044 loss1=0.365 acc1=0.919 loss2=3.812 acc2=0.306 loss3=3.876 acc3=0.294 (276s)
+[ 210.9m]   step 1500/3000 loss 7.499 loss1=0.339 acc1=0.925 loss2=3.620 acc2=0.326 loss3=3.731 acc3=0.302 (345s)
+[ 212.1m]   step 1800/3000 loss 7.475 loss1=0.309 acc1=0.931 loss2=3.490 acc2=0.338 loss3=3.610 acc3=0.315 (414s)
+[ 213.2m]   step 2100/3000 loss 7.333 loss1=0.308 acc1=0.932 loss2=3.390 acc2=0.347 loss3=3.562 acc3=0.321 (483s)
+[ 214.4m]   step 2400/3000 loss 7.077 loss1=0.290 acc1=0.936 loss2=3.346 acc2=0.354 loss3=3.441 acc3=0.334 (552s)
+[ 215.5m]   step 2700/3000 loss 7.004 loss1=0.301 acc1=0.933 loss2=3.307 acc2=0.359 loss3=3.433 acc3=0.331 (622s)
+[ 216.7m]   step 3000/3000 loss 7.639 loss1=0.281 acc1=0.938 loss2=3.300 acc2=0.358 loss3=3.434 acc3=0.334 (691s)
+[ 216.7m]   val: {"loss1": 0.7255, "acc1": 0.8837, "loss2": 5.6227, "acc2": 0.2336, "loss3": 5.6201, "acc3": 0.2288}
+[ 217.1m] S8 fold gemma3-1b: zeroshot 1.048x (1.16 tok/round); textonly 1.044x (1.16 tok/round); inmodel 1.073x (1.18 tok/round); truth_units 1.997x (2.20 tok/round); pld 1.045x (1.06 tok/round); logitspec 1.046x (1.07 tok/round)
+[ 217.1m]   S8 fold llama3.2-1b / zeroshot: training 4000 steps on 712742 positions (cands=True)
+[ 218.8m]   step 400/4000 loss 10.233 loss1=1.588 acc1=0.666 loss2=4.432 acc2=0.260 loss3=4.445 acc3=0.268 (103s)
+[ 220.5m]   step 800/4000 loss 9.563 loss1=1.443 acc1=0.691 loss2=4.142 acc2=0.288 loss3=4.138 acc3=0.294 (205s)
+[ 222.2m]   step 1200/4000 loss 9.376 loss1=1.379 acc1=0.701 loss2=3.953 acc2=0.302 loss3=3.989 acc3=0.304 (306s)
+[ 223.9m]   step 1600/4000 loss 8.803 loss1=1.289 acc1=0.714 loss2=3.772 acc2=0.329 loss3=3.800 acc3=0.326 (408s)
+[ 225.6m]   step 2000/4000 loss 8.832 loss1=1.237 acc1=0.726 loss2=3.616 acc2=0.340 loss3=3.675 acc3=0.337 (511s)
+[ 227.3m]   step 2400/4000 loss 8.530 loss1=1.203 acc1=0.732 loss2=3.544 acc2=0.349 loss3=3.613 acc3=0.343 (614s)
+[ 229.0m]   step 2800/4000 loss 8.223 loss1=1.161 acc1=0.740 loss2=3.433 acc2=0.361 loss3=3.523 acc3=0.358 (716s)
+[ 230.7m]   step 3200/4000 loss 8.280 loss1=1.142 acc1=0.741 loss2=3.408 acc2=0.368 loss3=3.471 acc3=0.362 (819s)
+[ 232.4m]   step 3600/4000 loss 7.801 loss1=1.125 acc1=0.742 loss2=3.382 acc2=0.368 loss3=3.491 acc3=0.358 (921s)
+[ 234.1m]   step 4000/4000 loss 8.344 loss1=1.125 acc1=0.745 loss2=3.354 acc2=0.379 loss3=3.457 acc3=0.366 (1024s)
+[ 234.3m]   val: {"loss1": 1.6722, "acc1": 0.6665, "loss2": 5.0193, "acc2": 0.2316, "loss3": 4.9395, "acc3": 0.2424}
+[ 234.9m]   S8 fold llama3.2-1b / textonly: training 4000 steps on 712742 positions (cands=False)
+[ 236.2m]   step 400/4000 loss 10.271 loss1=1.586 acc1=0.667 loss2=4.432 acc2=0.262 loss3=4.447 acc3=0.266 (78s)
+[ 237.5m]   step 800/4000 loss 9.541 loss1=1.443 acc1=0.690 loss2=4.145 acc2=0.290 loss3=4.148 acc3=0.296 (157s)
+[ 238.8m]   step 1200/4000 loss 9.470 loss1=1.383 acc1=0.698 loss2=3.970 acc2=0.305 loss3=4.009 acc3=0.307 (235s)
+[ 240.1m]   step 1600/4000 loss 8.785 loss1=1.303 acc1=0.710 loss2=3.795 acc2=0.328 loss3=3.835 acc3=0.323 (314s)
+[ 241.4m]   step 2000/4000 loss 9.008 loss1=1.266 acc1=0.718 loss2=3.657 acc2=0.339 loss3=3.716 acc3=0.336 (392s)
+[ 242.8m]   step 2400/4000 loss 8.597 loss1=1.237 acc1=0.725 loss2=3.582 acc2=0.343 loss3=3.663 acc3=0.338 (470s)
+[ 244.1m]   step 2800/4000 loss 8.378 loss1=1.203 acc1=0.731 loss2=3.486 acc2=0.357 loss3=3.569 acc3=0.356 (549s)
+[ 245.4m]   step 3200/4000 loss 8.404 loss1=1.182 acc1=0.735 loss2=3.465 acc2=0.363 loss3=3.522 acc3=0.356 (628s)
+[ 246.7m]   step 3600/4000 loss 7.886 loss1=1.167 acc1=0.736 loss2=3.441 acc2=0.366 loss3=3.539 acc3=0.355 (706s)
+[ 248.0m]   step 4000/4000 loss 8.498 loss1=1.169 acc1=0.737 loss2=3.412 acc2=0.367 loss3=3.505 acc3=0.363 (785s)
+[ 248.1m]   val: {"loss1": 1.7235, "acc1": 0.6569, "loss2": 5.0667, "acc2": 0.2266, "loss3": 4.9773, "acc3": 0.2408}
+[ 248.6m]   S8 fold llama3.2-1b / inmodel: training 3000 steps on 249591 positions (cands=True)
+[ 249.7m]   step 300/3000 loss 10.115 loss1=1.286 acc1=0.696 loss2=4.393 acc2=0.256 loss3=4.479 acc3=0.250 (69s)
+[ 250.9m]   step 600/3000 loss 8.872 loss1=1.120 acc1=0.721 loss2=3.983 acc2=0.287 loss3=4.117 acc3=0.274 (138s)
+[ 252.0m]   step 900/3000 loss 8.944 loss1=1.091 acc1=0.727 loss2=3.732 acc2=0.314 loss3=3.926 acc3=0.287 (207s)
+[ 253.2m]   step 1200/3000 loss 7.925 loss1=1.048 acc1=0.730 loss2=3.550 acc2=0.328 loss3=3.780 acc3=0.301 (276s)
+[ 254.3m]   step 1500/3000 loss 8.272 loss1=0.989 acc1=0.747 loss2=3.423 acc2=0.342 loss3=3.630 acc3=0.316 (345s)
+[ 255.5m]   step 1800/3000 loss 7.929 loss1=0.964 acc1=0.746 loss2=3.332 acc2=0.351 loss3=3.544 acc3=0.327 (414s)
+[ 256.6m]   step 2100/3000 loss 7.355 loss1=0.929 acc1=0.755 loss2=3.254 acc2=0.359 loss3=3.483 acc3=0.327 (483s)
+[ 257.8m]   step 2400/3000 loss 7.028 loss1=0.909 acc1=0.758 loss2=3.203 acc2=0.366 loss3=3.409 acc3=0.336 (553s)
+[ 258.9m]   step 2700/3000 loss 7.820 loss1=0.924 acc1=0.757 loss2=3.179 acc2=0.370 loss3=3.406 acc3=0.342 (622s)
+[ 260.1m]   step 3000/3000 loss 7.604 loss1=0.927 acc1=0.754 loss2=3.178 acc2=0.363 loss3=3.428 acc3=0.335 (692s)
+[ 260.1m]   val: {"loss1": 1.3027, "acc1": 0.7051, "loss2": 4.9982, "acc2": 0.2451, "loss3": 4.8967, "acc3": 0.2559}
+[ 261.0m] S8 fold llama3.2-1b: zeroshot 1.270x (1.43 tok/round); textonly 1.342x (1.51 tok/round); inmodel 1.453x (1.64 tok/round); truth_units 3.784x (4.24 tok/round); pld 1.123x (1.15 tok/round); logitspec 1.008x (1.03 tok/round)
+[ 261.0m]   S8 fold sarvam1 / zeroshot: training 4000 steps on 854227 positions (cands=True)
+[ 262.7m]   step 400/4000 loss 10.776 loss1=1.632 acc1=0.650 loss2=4.466 acc2=0.256 loss3=4.511 acc3=0.261 (102s)
+[ 264.4m]   step 800/4000 loss 10.094 loss1=1.539 acc1=0.661 loss2=4.213 acc2=0.277 loss3=4.251 acc3=0.283 (204s)
+[ 266.1m]   step 1200/4000 loss 9.687 loss1=1.433 acc1=0.680 loss2=3.966 acc2=0.301 loss3=4.086 acc3=0.295 (306s)
+[ 267.8m]   step 1600/4000 loss 9.363 loss1=1.373 acc1=0.689 loss2=3.869 acc2=0.311 loss3=3.932 acc3=0.309 (408s)
+[ 269.5m]   step 2000/4000 loss 9.353 loss1=1.338 acc1=0.693 loss2=3.731 acc2=0.319 loss3=3.785 acc3=0.320 (510s)
+[ 271.2m]   step 2400/4000 loss 8.528 loss1=1.284 acc1=0.706 loss2=3.659 acc2=0.327 loss3=3.754 acc3=0.323 (613s)
+[ 272.9m]   step 2800/4000 loss 7.914 loss1=1.257 acc1=0.711 loss2=3.577 acc2=0.341 loss3=3.669 acc3=0.334 (715s)
+[ 274.6m]   step 3200/4000 loss 8.466 loss1=1.241 acc1=0.709 loss2=3.517 acc2=0.345 loss3=3.656 acc3=0.336 (818s)
+[ 276.3m]   step 3600/4000 loss 8.730 loss1=1.212 acc1=0.718 loss2=3.513 acc2=0.348 loss3=3.640 acc3=0.336 (920s)
+[ 278.0m]   step 4000/4000 loss 8.332 loss1=1.224 acc1=0.718 loss2=3.482 acc2=0.353 loss3=3.625 acc3=0.338 (1022s)
+[ 278.2m]   val: {"loss1": 1.6458, "acc1": 0.656, "loss2": 4.9233, "acc2": 0.2408, "loss3": 4.8329, "acc3": 0.2484}
+[ 278.6m]   S8 fold sarvam1 / textonly: training 4000 steps on 854227 positions (cands=False)
+[ 279.9m]   step 400/4000 loss 10.782 loss1=1.630 acc1=0.650 loss2=4.463 acc2=0.256 loss3=4.512 acc3=0.260 (78s)
+[ 281.2m]   step 800/4000 loss 10.120 loss1=1.544 acc1=0.660 loss2=4.218 acc2=0.277 loss3=4.256 acc3=0.284 (156s)
+[ 282.5m]   step 1200/4000 loss 9.714 loss1=1.441 acc1=0.677 loss2=3.973 acc2=0.301 loss3=4.099 acc3=0.296 (234s)
+[ 283.8m]   step 1600/4000 loss 9.454 loss1=1.394 acc1=0.685 loss2=3.893 acc2=0.308 loss3=3.955 acc3=0.306 (312s)
+[ 285.1m]   step 2000/4000 loss 9.545 loss1=1.370 acc1=0.687 loss2=3.764 acc2=0.319 loss3=3.823 acc3=0.319 (390s)
+[ 286.4m]   step 2400/4000 loss 8.611 loss1=1.322 acc1=0.697 loss2=3.701 acc2=0.323 loss3=3.792 acc3=0.323 (468s)
+[ 287.7m]   step 2800/4000 loss 7.990 loss1=1.291 acc1=0.703 loss2=3.624 acc2=0.337 loss3=3.710 acc3=0.331 (547s)
+[ 289.1m]   step 3200/4000 loss 8.557 loss1=1.278 acc1=0.704 loss2=3.561 acc2=0.342 loss3=3.704 acc3=0.333 (625s)
+[ 290.4m]   step 3600/4000 loss 8.788 loss1=1.254 acc1=0.710 loss2=3.560 acc2=0.343 loss3=3.679 acc3=0.336 (703s)
+[ 291.7m]   step 4000/4000 loss 8.523 loss1=1.268 acc1=0.706 loss2=3.533 acc2=0.346 loss3=3.667 acc3=0.337 (782s)
+[ 291.8m]   val: {"loss1": 1.7004, "acc1": 0.6471, "loss2": 4.9554, "acc2": 0.2346, "loss3": 4.8577, "acc3": 0.2439}
+[ 292.1m]   S8 fold sarvam1 / inmodel: training 3000 steps on 108106 positions (cands=True)
+[ 293.3m]   step 300/3000 loss 9.684 loss1=0.594 acc1=0.878 loss2=4.498 acc2=0.257 loss3=4.576 acc3=0.256 (69s)
+[ 294.4m]   step 600/3000 loss 8.027 loss1=0.506 acc1=0.893 loss2=3.948 acc2=0.314 loss3=4.059 acc3=0.296 (138s)
+[ 295.6m]   step 900/3000 loss 7.852 loss1=0.449 acc1=0.903 loss2=3.642 acc2=0.344 loss3=3.793 acc3=0.324 (207s)
+[ 296.7m]   step 1200/3000 loss 7.322 loss1=0.426 acc1=0.909 loss2=3.407 acc2=0.367 loss3=3.565 acc3=0.343 (276s)
+[ 297.9m]   step 1500/3000 loss 7.113 loss1=0.380 acc1=0.918 loss2=3.231 acc2=0.390 loss3=3.410 acc3=0.357 (345s)
+[ 299.0m]   step 1800/3000 loss 6.861 loss1=0.369 acc1=0.921 loss2=3.106 acc2=0.400 loss3=3.273 acc3=0.372 (414s)
+[ 300.2m]   step 2100/3000 loss 6.468 loss1=0.345 acc1=0.925 loss2=3.008 acc2=0.415 loss3=3.219 acc3=0.374 (483s)
+[ 301.3m]   step 2400/3000 loss 6.068 loss1=0.333 acc1=0.929 loss2=2.941 acc2=0.420 loss3=3.105 acc3=0.388 (552s)
+[ 302.5m]   step 2700/3000 loss 6.457 loss1=0.349 acc1=0.928 loss2=2.923 acc2=0.417 loss3=3.100 acc3=0.387 (622s)
+[ 303.6m]   step 3000/3000 loss 5.755 loss1=0.327 acc1=0.930 loss2=2.888 acc2=0.428 loss3=3.065 acc3=0.393 (691s)
+[ 303.7m]   val: {"loss1": 0.8968, "acc1": 0.8595, "loss2": 5.6017, "acc2": 0.2277, "loss3": 5.7008, "acc3": 0.2187}
+[ 304.0m] S8 fold sarvam1: zeroshot 1.057x (1.17 tok/round); textonly 1.049x (1.16 tok/round); inmodel 1.067x (1.18 tok/round); truth_units 2.031x (2.24 tok/round); pld 1.202x (1.22 tok/round); logitspec 1.087x (1.11 tok/round)
+[ 304.0m]   S9 zeroshot_all: training 4000 steps on 962333 positions (cands=True)
+[ 305.8m]   step 400/4000 loss 10.653 loss1=1.555 acc1=0.669 loss2=4.547 acc2=0.251 loss3=4.593 acc3=0.256 (107s)
+[ 307.6m]   step 800/4000 loss 9.835 loss1=1.445 acc1=0.685 loss2=4.287 acc2=0.272 loss3=4.320 acc3=0.279 (214s)
+[ 309.4m]   step 1200/4000 loss 10.085 loss1=1.376 acc1=0.698 loss2=4.096 acc2=0.288 loss3=4.154 acc3=0.290 (320s)
+[ 311.2m]   step 1600/4000 loss 9.282 loss1=1.300 acc1=0.709 loss2=3.982 acc2=0.303 loss3=4.016 acc3=0.304 (427s)
+[ 312.9m]   step 2000/4000 loss 8.812 loss1=1.283 acc1=0.709 loss2=3.810 acc2=0.319 loss3=3.898 acc3=0.313 (534s)
+[ 314.7m]   step 2400/4000 loss 8.922 loss1=1.234 acc1=0.719 loss2=3.765 acc2=0.324 loss3=3.830 acc3=0.320 (641s)
+[ 316.5m]   step 2800/4000 loss 8.861 loss1=1.192 acc1=0.728 loss2=3.704 acc2=0.333 loss3=3.762 acc3=0.331 (749s)
+[ 318.3m]   step 3200/4000 loss 8.479 loss1=1.188 acc1=0.727 loss2=3.621 acc2=0.344 loss3=3.716 acc3=0.332 (856s)
+[ 320.1m]   step 3600/4000 loss 8.238 loss1=1.178 acc1=0.730 loss2=3.628 acc2=0.333 loss3=3.709 acc3=0.332 (964s)
+[ 321.9m]   step 4000/4000 loss 8.312 loss1=1.177 acc1=0.728 loss2=3.614 acc2=0.345 loss3=3.699 acc3=0.336 (1071s)
+[ 322.1m]   val: {"loss1": 1.5647, "acc1": 0.6726, "loss2": 4.8939, "acc2": 0.2383, "loss3": 4.8345, "acc3": 0.2447}
+[ 323.2m]   S9 textonly_all: training 4000 steps on 962333 positions (cands=False)
+[ 324.6m]   step 400/4000 loss 10.660 loss1=1.550 acc1=0.671 loss2=4.542 acc2=0.249 loss3=4.590 acc3=0.257 (82s)
+[ 325.9m]   step 800/4000 loss 9.829 loss1=1.450 acc1=0.683 loss2=4.295 acc2=0.271 loss3=4.324 acc3=0.279 (165s)
+[ 327.3m]   step 1200/4000 loss 10.179 loss1=1.395 acc1=0.696 loss2=4.113 acc2=0.286 loss3=4.176 acc3=0.290 (248s)
+[ 328.7m]   step 1600/4000 loss 9.401 loss1=1.330 acc1=0.703 loss2=4.021 acc2=0.299 loss3=4.045 acc3=0.304 (330s)
+[ 330.1m]   step 2000/4000 loss 8.922 loss1=1.320 acc1=0.702 loss2=3.857 acc2=0.314 loss3=3.940 acc3=0.310 (413s)
+[ 331.4m]   step 2400/4000 loss 8.986 loss1=1.282 acc1=0.709 loss2=3.821 acc2=0.316 loss3=3.879 acc3=0.319 (496s)
+[ 332.8m]   step 2800/4000 loss 8.994 loss1=1.237 acc1=0.719 loss2=3.768 acc2=0.322 loss3=3.816 acc3=0.327 (579s)
+[ 334.2m]   step 3200/4000 loss 8.649 loss1=1.237 acc1=0.720 loss2=3.684 acc2=0.337 loss3=3.770 acc3=0.328 (662s)
+[ 335.6m]   step 3600/4000 loss 8.436 loss1=1.228 acc1=0.722 loss2=3.694 acc2=0.327 loss3=3.766 acc3=0.330 (744s)
+[ 337.0m]   step 4000/4000 loss 8.442 loss1=1.229 acc1=0.721 loss2=3.684 acc2=0.335 loss3=3.755 acc3=0.334 (827s)
+[ 337.1m]   val: {"loss1": 1.6141, "acc1": 0.666, "loss2": 4.9624, "acc2": 0.2302, "loss3": 4.8769, "acc3": 0.2383}
+[ 337.9m]   S9 zeroshot_nollama: training 4000 steps on 712742 positions (cands=True)
+[ 339.6m]   step 400/4000 loss 10.213 loss1=1.588 acc1=0.666 loss2=4.433 acc2=0.260 loss3=4.446 acc3=0.266 (102s)
+[ 341.3m]   step 800/4000 loss 9.565 loss1=1.434 acc1=0.694 loss2=4.135 acc2=0.289 loss3=4.131 acc3=0.295 (205s)
+[ 343.0m]   step 1200/4000 loss 9.388 loss1=1.370 acc1=0.702 loss2=3.950 acc2=0.302 loss3=3.983 acc3=0.304 (307s)
+[ 344.8m]   step 1600/4000 loss 8.753 loss1=1.277 acc1=0.717 loss2=3.762 acc2=0.328 loss3=3.798 acc3=0.325 (409s)
+[ 346.5m]   step 2000/4000 loss 8.882 loss1=1.236 acc1=0.725 loss2=3.618 acc2=0.340 loss3=3.682 acc3=0.335 (512s)
+[ 348.2m]   step 2400/4000 loss 8.486 loss1=1.205 acc1=0.731 loss2=3.547 acc2=0.348 loss3=3.622 acc3=0.340 (614s)
+[ 349.9m]   step 2800/4000 loss 8.248 loss1=1.173 acc1=0.738 loss2=3.444 acc2=0.357 loss3=3.534 acc3=0.354 (717s)
+[ 351.6m]   step 3200/4000 loss 8.340 loss1=1.152 acc1=0.739 loss2=3.417 acc2=0.365 loss3=3.482 acc3=0.358 (819s)
+[ 353.3m]   step 3600/4000 loss 7.833 loss1=1.140 acc1=0.742 loss2=3.392 acc2=0.367 loss3=3.501 acc3=0.357 (922s)
+[ 355.0m]   step 4000/4000 loss 8.365 loss1=1.139 acc1=0.742 loss2=3.359 acc2=0.372 loss3=3.471 acc3=0.362 (1024s)
+[ 355.2m]   val: {"loss1": 1.6696, "acc1": 0.6694, "loss2": 5.0039, "acc2": 0.2357, "loss3": 4.9328, "acc3": 0.243}
+[ 356.2m]   S9 inmodel_ft: training 3000 steps on 57451 positions (cands=True)
+[ 357.3m]   step 300/3000 loss 9.226 loss1=1.141 acc1=0.726 loss2=4.232 acc2=0.262 loss3=4.301 acc3=0.259 (70s)
+[ 358.5m]   step 600/3000 loss 7.884 loss1=0.942 acc1=0.757 loss2=3.469 acc2=0.338 loss3=3.576 acc3=0.314 (139s)
+[ 359.6m]   step 900/3000 loss 6.792 loss1=0.837 acc1=0.777 loss2=2.969 acc2=0.396 loss3=3.155 acc3=0.360 (208s)
+[ 360.8m]   step 1200/3000 loss 5.863 loss1=0.787 acc1=0.788 loss2=2.653 acc2=0.437 loss3=2.836 acc3=0.396 (277s)
+[ 361.9m]   step 1500/3000 loss 5.926 loss1=0.688 acc1=0.814 loss2=2.435 acc2=0.463 loss3=2.604 acc3=0.429 (347s)
+[ 363.1m]   step 1800/3000 loss 5.085 loss1=0.667 acc1=0.819 loss2=2.261 acc2=0.494 loss3=2.415 acc3=0.458 (416s)
+[ 364.2m]   step 2100/3000 loss 5.029 loss1=0.638 acc1=0.829 loss2=2.135 acc2=0.513 loss3=2.291 acc3=0.485 (485s)
+[ 365.4m]   step 2400/3000 loss 4.631 loss1=0.614 acc1=0.834 loss2=2.085 acc2=0.526 loss3=2.222 acc3=0.499 (553s)
+[ 366.5m]   step 2700/3000 loss 4.792 loss1=0.612 acc1=0.835 loss2=2.044 acc2=0.528 loss3=2.199 acc3=0.504 (620s)
+[ 367.7m]   step 3000/3000 loss 4.774 loss1=0.596 acc1=0.836 loss2=2.036 acc2=0.534 loss3=2.180 acc3=0.507 (690s)
+[ 367.7m]   val: {"loss1": 1.7342, "acc1": 0.6684, "loss2": 6.3742, "acc2": 0.1895, "loss3": 6.3511, "acc3": 0.1918}
+[ 368.1m]   S9 inmodel_own: training 4000 steps on 57451 positions (cands=True)
+[ 369.6m]   step 400/4000 loss 8.575 loss1=1.129 acc1=0.715 loss2=3.875 acc2=0.280 loss3=4.010 acc3=0.254 (92s)
+[ 371.1m]   step 800/4000 loss 7.063 loss1=0.936 acc1=0.752 loss2=3.010 acc2=0.375 loss3=3.221 acc3=0.334 (183s)
+[ 372.7m]   step 1200/4000 loss 5.760 loss1=0.842 acc1=0.769 loss2=2.541 acc2=0.433 loss3=2.767 acc3=0.384 (275s)
+[ 374.2m]   step 1600/4000 loss 5.168 loss1=0.699 acc1=0.805 loss2=2.199 acc2=0.479 loss3=2.394 acc3=0.441 (368s)
+[ 375.8m]   step 2000/4000 loss 4.480 loss1=0.592 acc1=0.835 loss2=1.897 acc2=0.543 loss3=2.061 acc3=0.508 (460s)
+[ 377.3m]   step 2400/4000 loss 3.801 loss1=0.519 acc1=0.853 loss2=1.656 acc2=0.594 loss3=1.787 acc3=0.567 (552s)
+[ 378.8m]   step 2800/4000 loss 3.457 loss1=0.459 acc1=0.873 loss2=1.470 acc2=0.641 loss3=1.569 acc3=0.623 (644s)
+[ 380.4m]   step 3200/4000 loss 2.950 loss1=0.439 acc1=0.879 loss2=1.334 acc2=0.675 loss3=1.461 acc3=0.649 (736s)
+[ 381.9m]   step 3600/4000 loss 2.997 loss1=0.437 acc1=0.878 loss2=1.285 acc2=0.690 loss3=1.382 acc3=0.666 (828s)
+[ 383.4m]   step 4000/4000 loss 3.032 loss1=0.418 acc1=0.885 loss2=1.263 acc2=0.694 loss3=1.357 acc3=0.675 (921s)
+[ 383.5m]   val: {"loss1": 2.0687, "acc1": 0.6386, "loss2": 8.1018, "acc2": 0.1646, "loss3": 7.995, "acc3": 0.1646}
+[ 384.7m] S9 Llama-3-8B devtest:
+| method | speedup | ci_lo | ci_hi | tokens_per_round |
+|---|---|---|---|---|
+| Prompt lookup (training-free) | 1.050 | 1.045 | 1.055 | 1.073 |
+| LogitSpec-style chain (training-free) | 1.004 | 1.002 | 1.005 | 1.026 |
+| Truth units (upper bound of this head design) | 3.434 | 3.355 | 3.516 | 3.830 |
+| Universal head, zero-shot (all small LLMs) | 1.296 | 1.287 | 1.306 | 1.456 |
+| Universal head, zero-shot (all small LLMs) [tau=0] | 1.286 | 1.278 | 1.296 | 1.457 |
+| Universal head, zero-shot (all small LLMs) [oracle length, not a method] | 1.338 | 1.328 | 1.347 | 1.457 |
+| Text-only head, zero-shot (ablation: no distribution input) | 1.287 | 1.278 | 1.295 | 1.446 |
+| Text-only head, zero-shot (ablation: no distribution input) [tau=0] | 1.277 | 1.269 | 1.286 | 1.447 |
+| Text-only head, zero-shot (ablation: no distribution input) [oracle length, not a method] | 1.328 | 1.319 | 1.337 | 1.447 |
+| Universal head, zero-shot (no Llama-family data) | 1.211 | 1.204 | 1.219 | 1.359 |
+| Universal head, zero-shot (no Llama-family data) [tau=0] | 1.202 | 1.195 | 1.210 | 1.360 |
+| Universal head, zero-shot (no Llama-family data) [oracle length, not a method] | 1.251 | 1.243 | 1.258 | 1.360 |
+| In-model head (zero-shot head fine-tuned on 8B dev) | 1.311 | 1.301 | 1.320 | 1.472 |
+| In-model head (zero-shot head fine-tuned on 8B dev) [tau=0] | 1.298 | 1.289 | 1.307 | 1.478 |
+| In-model head (zero-shot head fine-tuned on 8B dev) [oracle length, not a method] | 1.355 | 1.346 | 1.365 | 1.478 |
+| In-model head (8B dev only) | 1.280 | 1.271 | 1.288 | 1.438 |
+| In-model head (8B dev only) [tau=0] | 1.268 | 1.259 | 1.276 | 1.445 |
+| In-model head (8B dev only) [oracle length, not a method] | 1.326 | 1.318 | 1.335 | 1.445 |
+[ 384.7m] S10 verdict: NO GO

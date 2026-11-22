@@ -1,0 +1,87 @@
+{
+ "git_hash": "git=9f1203decd0b src+consts_sha256=d875cf2683fc",
+ "torch": "2.11.0+cu130",
+ "transformers": "5.22.1",
+ "python": "3.13.16",
+ "gpus": [
+  "Tesla T4",
+  "Tesla T4"
+ ],
+ "time": "2026-11-17 23:51:34",
+ "models": {
+  "qwen2.5-1.5b": {
+   "key": "qwen2.5-1.5b",
+   "name": "Qwen/Qwen2.5-1.5B-Instruct",
+   "eos_ids": [
+    151643,
+    151645
+   ],
+   "vocab_size": 151936,
+   "len_tok": 151665,
+   "dtype": "fp16",
+   "prompt_mode": "chat",
+   "family": "qwen",
+   "tf_argmax_agreement": {
+    "dev": 0.9978566262480316,
+    "extra": 0.9975678397826271,
+    "devtest": 0.9977870970695815
+   }
+  },
+  "gemma3-1b": {
+   "key": "gemma3-1b",
+   "name": "unsloth/gemma-3-1b-it",
+   "eos_ids": [
+    1,
+    106
+   ],
+   "vocab_size": 262144,
+   "len_tok": 262145,
+   "dtype": "fp32",
+   "prompt_mode": "chat",
+   "family": "gemma",
+   "tf_argmax_agreement": {
+    "dev": 1.0,
+    "extra": 0.9999931972789114,
+    "devtest": 0.9876228294790806
+   }
+  },
+  "llama3.2-1b": {
+   "key": "llama3.2-1b",
+   "name": "meta-llama/Llama-3.2-1B-Instruct",
+   "eos_ids": [
+    128001,
+    128008,
+    128009
+   ],
+   "vocab_size": 128256,
+   "len_tok": 128256,
+   "dtype": "fp16",
+   "prompt_mode": "chat",
+   "family": "llama3",
+   "tf_argmax_agreement": {
+    "dev": 0.9980273575091105,
+    "extra": 0.9981786010579717,
+    "devtest": 0.998384497840383
+   }
+  },
+  "sarvam1": {
+   "key": "sarvam1",
+   "name": "sarvamai/sarvam-1",
+   "eos_ids": [
+    2
+   ],
+   "vocab_size": 68096,
+   "len_tok": 68096,
+   "dtype": "fp16",
+   "prompt_mode": "base",
+   "family": "sarvam",
+   "tf_argmax_agreement": {
+    "dev": 0.9605830084470672,
+    "extra": 0.950775983231742,
+    "devtest": 0.9613654875040181
+   }
+  }
+ },
+ "l8_source": "fresh",
+ "verdict": "NO GO"
+}

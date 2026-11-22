@@ -1,0 +1,26 @@
+{
+ "decision": "NO GO",
+ "zeroshot_speedup": 1.2961049970481882,
+ "zeroshot_ci": [
+  1.2873770980565695,
+  1.3056895019944141
+ ],
+ "entropy_speedup": 1.4518454191605557,
+ "beats_entropy_ci": false,
+ "inmodel_speedup": 1.3106024752212937,
+ "recovery": 0.9533246534407797,
+ "textonly_speedup": 1.286515943422225,
+ "distribution_input_helps": true,
+ "dist_vs_text": {
+  "diff": 0.009589053625963073,
+  "lo": 0.005950004683093909,
+  "hi": 0.013151150769550387,
+  "p_better": 1.0,
+  "n_boot": 1000,
+  "seed": 0
+ },
+ "criteria": {
+  "go_speedup": 1.6,
+  "go_recovery": 0.7
+ }
+}
