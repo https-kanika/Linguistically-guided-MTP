@@ -3,6 +3,7 @@
     python scripts/smoke_cpu.py --part 01      # notebook 01: generation, teacher-forced passes, timing, zip
     python scripts/smoke_cpu.py --part 03      # notebook 03: real speculative loop (added in step S5)
     python scripts/smoke_cpu.py --part w1      # notebook 05: week-1 universal head, all stages, tiny models
+    python scripts/smoke_cpu.py --part wh      # notebook 07: word-completion heads on the draft model
 
 Uses meta-llama/Llama-3.2-1B-Instruct as both target and draft (fp32, loaded once), 3 sentences per
 split, MAX_NEW=24. Outputs go to data/smoke/ (gitignored).
@@ -350,9 +351,59 @@ def part_dt() -> None:
     print(f"drafter smoke test passed ({t1 - t0:.0f}s, resume {time.time() - t1:.0f}s)")
 
 
+def part_wh() -> None:
+    """Notebook 07: word-completion heads. Real Llama-3.2-1B (fp32, CPU), a handful of training pairs,
+    a few steps; dump along three real 8B outputs from the Phase-1 traces and check that the dumped
+    draft argmax equals the Phase-1 trace's draft_argmax (row alignment), then resume from saved heads."""
+    import json
+    from lgmtp.wordheads import wordheads_main, VARIANTS
+    from lgmtp.traces import load_traces
+    out_root = SMOKE_ROOT / "wh"
+    if out_root.exists():
+        shutil.rmtree(out_root)
+    tr_dir = ROOT / "data" / "traces_v2"
+    recs = [json.loads(l) for l in open(tr_dir / "target_outputs_devtest.jsonl", encoding="utf-8")][:3]
+    pairs = [("The weather is nice today.", "आज मौसम अच्छा है।"),
+             ("India has many languages.", "भारत में कई भाषाएँ हैं।"),
+             ("He went to the market to buy vegetables.", "वह सब्ज़ियाँ खरीदने बाज़ार गया।"),
+             ("Water boils at one hundred degrees.", "पानी सौ डिग्री पर उबलता है।"),
+             ("The children are playing in the garden.", "बच्चे बगीचे में खेल रहे हैं।"),
+             ("She reads a book every evening.", "वह हर शाम एक किताब पढ़ती है।")] * 3
+    cfg = dict(DRAFT=["meta-llama/Llama-3.2-1B-Instruct"], TRAIN_PAIRS=pairs, N_VAL=4, BATCH=4, MAX_STEPS=4,
+               POS_PER_HEAD=16, EVAL_EVERY=2, WARMUP=2, TIME_Q=[1, 3], TIME_STEPS=2, TIME_REPS=1, TIME_CTX=32,
+               OUT_ROOT=str(out_root / "working"), SEARCH=[str(out_root / "kaggle_input")], SMOKE=True)
+    t0 = time.time()
+    info = wordheads_main(cfg, {"devtest": recs})
+    wd = out_root / "working" / "wordheads"
+    with np.load(wd / "heads_devtest.npz") as z:
+        n = int(z["offsets"][-1])
+        assert n == sum(len(r["out_ids"]) for r in recs)
+        for v in VARIANTS:
+            assert z[f"{v}_ids"].shape == (n, 3, 8) and z[f"{v}_cont"].shape == (n, 3)
+            assert z[f"{v}_cv_id"].shape == (n, 3) and np.isin(z[f"{v}_cv_id"], z["cont_vocab"]).all()
+        traces, _ = load_traces(tr_dir / "traces_devtest.npz")
+        by_id = {t.id: t for t in traces}
+        ref = np.concatenate([by_id[r["id"]].draft_argmax for r in recs])
+        agree = float((z["draft_argmax"] == ref).mean())
+    print("draft argmax agreement with Phase-1 traces:", round(agree, 4))
+    assert agree > 0.97, f"rows misaligned? agreement {agree}"
+    assert set(info["timing"]["r_q"]) == {"1", "3"} and info["timing"]["head_rel_cv"] > 0
+    with zipfile.ZipFile(out_root / "working" / "wordheads.zip") as zz:
+        names = set(zz.namelist())
+    assert {"heads_devtest.npz", "wordheads_v1.pt", "run_info.json", "train_info.json"} <= names, names
+    # resume: attach the output as input; heads must be reused, not retrained
+    shutil.copytree(wd, out_root / "kaggle_input" / "prev" / "wordheads")
+    cfg["OUT_ROOT"] = str(out_root / "working2")
+    t1 = time.time()
+    wordheads_main(cfg, {"devtest": recs[:1]})
+    log = (out_root / "working2" / "wordheads" / "log.txt").read_text(encoding="utf-8")
+    assert "heads: reused" in log
+    print(f"wordheads smoke test passed ({t1 - t0:.0f}s, resume {time.time() - t1:.0f}s)")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--part", choices=["01", "03", "w1", "dt"], required=True)
+    ap.add_argument("--part", choices=["01", "03", "w1", "dt", "wh"], required=True)
     ap.add_argument("--selected", default=None, help="selected_params.json (part 03; default: smoke params)")
     ap.add_argument("--noise", type=float, default=0.0, help="part 03: draft logit noise (exercise rejections)")
     a = ap.parse_args()
@@ -362,6 +413,8 @@ def main() -> None:
         part_w1()
     elif a.part == "dt":
         part_dt()
+    elif a.part == "wh":
+        part_wh()
     else:
         part03(a.selected, a.noise)
 
