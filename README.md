@@ -79,16 +79,25 @@ Takeaways:
 
 ## 3b. Head results (Kaggle run 07 + `scripts/run_refund_sim.py`)
 
-Numbers from `results/wordheads/main_table.csv` (quick tuning grid; the full grid will replace them).
-Devtest, 95% bootstrap CIs, paired CIs vs Entropy.
+Numbers from `results/wordheads/main_table.csv` (full tuning grid on dev, reported on devtest), with 95%
+bootstrap CIs and paired CIs vs Entropy.
 
 | drafter | speed-up [95% CI] | diff vs Entropy |
 |---|---|---|
 | Entropy (Phase 1) | 1.452 [1.444, 1.461] | — |
+| Dictionary, every mid-word position | 1.226 [1.218, 1.234] | [−0.235, −0.217] |
+| Dictionary, confidence-gated | 1.471 [1.462, 1.480] | [+0.017, +0.022] |
+| Heads V0, plain MTP (continuation vocab) | 1.497 [1.487, 1.508] | [+0.042, +0.048] |
 | Heads V0, plain MTP (full vocab) | 1.496 [1.485, 1.506] | [+0.040, +0.047] |
-| Heads V0, plain MTP (continuation vocab) | 1.476 [1.467, 1.486] | [+0.020, +0.029] |
-| **Heads V1, word-guided (continuation vocab)** | **1.501 [1.492, 1.512]** | **[+0.045, +0.053]** |
-| Heads V2, adaptive weights (continuation vocab) | 1.501 [1.491, 1.512] | [+0.045, +0.053] |
+| **Heads V1, word-guided (continuation vocab)** | **1.514 [1.503, 1.525]** | **[+0.057, +0.066]** |
+| Heads V2, adaptive weights (continuation vocab) | 1.505 [1.496, 1.516] | [+0.050, +0.057] |
+| Ceiling: continuations at 5% of a 1B call | 1.911 [1.894, 1.931] | [+0.449, +0.470] |
+
+Paired differences (devtest):
+- V1 − V0, same (continuation) vocab: +0.016 [+0.012, +0.020].
+- V1 − best V0: +0.018 [+0.014, +0.022].
+- V2 − V1: −0.008 [−0.011, −0.005].
+- V1 − gated dictionary: +0.043 [+0.038, +0.047].
 
 Head accuracy on word-continuation tokens along the 8B outputs (`head_accuracy.json`), heads 1/2/3:
 

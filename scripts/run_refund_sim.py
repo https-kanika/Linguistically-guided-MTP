@@ -84,7 +84,7 @@ def main():
     acc = {f"{v}_{src}": R.head_accuracy(tr["devtest"], v, src) for v in R.VARIANTS for src in ("cv", "full")}
     for k, v in acc.items():
         log("head accuracy", k, v)
-    ths = (0.0, 0.3, 0.5) if a.quick else (0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7)
+    ths = (0.0, 0.3, 0.5) if a.quick else (0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
     tcs = (None, 0.5) if a.quick else (None, 0.3, 0.4, 0.5, 0.6, 0.7)
     for v in R.VARIANTS:
         for src in ("cv", "full"):
