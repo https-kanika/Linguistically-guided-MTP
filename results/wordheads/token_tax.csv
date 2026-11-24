@@ -1,0 +1,4 @@
+tokenizer,vocab,hindi_tokens_per_word,english_tokens_per_word,hindi_over_english,continuation_share
+meta-llama/Meta-Llama-3-8B-Instruct,128256,2.672,1.241,2.15,0.626
+Qwen/Qwen3.5-0.8B,248077,2.159,1.257,1.72,0.537
+sarvamai/sarvam-1,68096,1.401,1.435,0.98,0.286

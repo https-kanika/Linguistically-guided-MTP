@@ -212,7 +212,7 @@ GPU run (Kaggle, one T4, about 1–1.5 h):
 |---|---|---|
 | 1 | `wordheads.py`, Kaggle notebook 07, smoke test, tests | **done** (smoke passes, row alignment 0.996 on CPU) |
 | 2 | `src/lgmtp/refund_sim.py` + tests, `scripts/run_refund_sim.py` (main table) | **done** (Kaggle run done, heads beat Entropy) |
-| 3 | `notebooks/08_wordheads_analysis.ipynb`: main table with paired CIs, ρ curve with every method placed on it, per-position accuracy V0 vs V1, token-tax table per tokenizer | after the Kaggle run |
+| 3 | `notebooks/08_wordheads_analysis.ipynb` (built by `scripts/build_analysis_notebook.py`): main table, ρ curve with the heads placed on it, head accuracy, training curves, gain by sentence, token-tax table; figures `results/wordheads/fig_*.png` | **done** |
 
 Decision points:
 - If the heads keep less than 70% of the 1B's correct continuation tokens, there is no speed-up. The
