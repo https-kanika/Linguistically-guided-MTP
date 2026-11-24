@@ -26,18 +26,21 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true", help="small grids (minutes)")
     ap.add_argument("--no-dict", action="store_true", help="skip the (slow) dictionary drafters")
+    ap.add_argument("--heads-dir", default=str(H), help="Kaggle output with heads_{dev,devtest}.npz")
+    ap.add_argument("--out", default=str(OUT), help="output directory")
     a = ap.parse_args()
+    H_, OUT_ = Path(a.heads_dir), Path(a.out)
     from transformers import AutoTokenizer
     tok = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B-Instruct")
-    cost = R.load_cost(D / "timing.json", H / "run_info.json")
+    cost = R.load_cost(D / "timing.json", H_ / "run_info.json")
     tr, align = {}, {}
     for s in ("dev", "devtest"):
         tr[s] = load_traces(D / f"traces_{s}.npz")[0]
         attach_word_labels(tr[s], tok)
-        align[s] = R.attach_heads(tr[s], H / f"heads_{s}.npz")["agreement"]
+        align[s] = R.attach_heads(tr[s], H_ / f"heads_{s}.npz")["agreement"]
     gate = R.devanagari_mask(tok, len(tr["dev"][0]._in_cv))
     lams = (-0.9, -0.683, -0.5) if a.quick else R.LAM_GRID
-    OUT.mkdir(parents=True, exist_ok=True)
+    OUT_.mkdir(parents=True, exist_ok=True)
     tuning, rows = [], {}
     t0 = time.time()
 
@@ -123,16 +126,16 @@ def main():
             print("compare", a_, "-", b_, comparisons[f"{a_} - {b_}"])
     meta = dict(alignment=align, comparisons=comparisons, cost=dict(c=cost.c, r_q=cost.r_q, head_rel_cv=cost.head_rel_cv,
                                            head_rel_full=cost.head_rel_full), quick=a.quick)
-    (OUT / "sim_results.json").write_text(json.dumps(dict(meta=meta, table=table, rho_curve=rho), indent=1))
-    (OUT / "head_accuracy.json").write_text(json.dumps(acc, indent=1))
-    with open(OUT / "main_table.csv", "w", newline="", encoding="utf-8") as f:
+    (OUT_ / "sim_results.json").write_text(json.dumps(dict(meta=meta, table=table, rho_curve=rho), indent=1))
+    (OUT_ / "head_accuracy.json").write_text(json.dumps(acc, indent=1))
+    with open(OUT_ / "main_table.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["method", "speedup", "ci_lo", "ci_hi", "diff_lo", "diff_hi", "tokens_per_round", "params"])
         for r in table:
             w.writerow([r["method"], r["speedup"], *r["ci"], *r["diff_vs_entropy_ci"], r["tokens_per_round"],
                         json.dumps(r["params"])])
     keys = sorted({k for r in tuning for k in r})
-    with open(OUT / "tuning_dev.csv", "w", newline="", encoding="utf-8") as f:
+    with open(OUT_ / "tuning_dev.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, keys)
         w.writeheader()
         w.writerows(tuning)

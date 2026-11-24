@@ -39,8 +39,8 @@ model). We then train small Medusa-style heads on the frozen draft model, restri
 1{,}406-token continuation vocabulary so they cost under 2\% of a draft call. Word-guided training
 (loss only inside words, plus a word-continuation head) beats plain multi-token prediction
 (1.514\x{} vs.\ 1.497\x{}, paired difference $+0.016$ [$+0.012$, $+0.020$]), and filtering head proposals
-with a Hindi lexicon gives the best system, 1.533\x{} [1.521, 1.546], a 5.6\% gain over the entropy
-baseline with unchanged output. Linguistic knowledge helps either through training or through the
+with a Hindi lexicon gives 1.533\x{} [1.521, 1.546]. Training on three times more data raises this to
+1.542\x{} [1.530, 1.555], a 6.2\% gain over the entropy baseline with unchanged output. Linguistic knowledge helps either through training or through the
 lexicon at inference time, but the two gains do not add up.
 \end{abstract}
 
@@ -77,7 +77,8 @@ proposed almost for free, most of the tax would be refunded.
   model. A confidence-gated dictionary gives only a small gain (1.471\x).
   \item \textbf{Word-completion heads.} Small multi-token heads on the frozen 1B, restricted to a
   continuation vocabulary, realise part of the refund (1.514\x). Word-guided training beats plain
-  multi-token prediction, and constraining proposals with a lexicon gives the best result (1.533\x).
+  multi-token prediction, and constraining proposals with a lexicon gives the best result (1.533\x;
+  1.542\x{} with three times more training data).
   \item \textbf{Where knowledge enters matters little.} With the lexicon filter on, word-guided and
   plain heads are statistically tied: word structure can be supplied by training or by a word list,
   but not usefully by both.
@@ -333,6 +334,34 @@ quintiles).}
 \label{fig:share}
 \end{figure}
 
+\paragraph{More training data.} Table~\ref{tab:long} repeats the head experiments with 180k
+instead of 60k training pairs (5{,}598 steps, 1.8 hours on a T4), re-tuned on dev. All head systems
+improve; the best system reaches 1.542\x{} [1.530, 1.555], $+0.010$ [$+0.006$, $+0.013$] over the
+60k heads. Plain heads gain most (V0: $+0.013$), so the advantage of word-guided training shrinks from
+$+0.016$ to $+0.008$ [$+0.004$, $+0.012$], and V2 is now tied with V1 ($-0.001$ [$-0.004$, $+0.001$]).
+With the lexicon filter, V1 is marginally ahead of V0 ($+0.005$ [$+0.001$, $+0.009$]). Word-guided
+training therefore acts partly as a data-efficiency aid: it gets plain MTP's accuracy with less data,
+and the lexicon filter still adds $+0.024$ [$+0.019$, $+0.029$] on top of V1. Head accuracy rises to
+57.2/49.8/43.9\% for V1 (55.5/42.8/32.7\% for V0), still far below the draft model's 83--86\%.
+
+\begin{table}[t]
+\centering
+\begin{tabular}{lccc}
+\toprule
+drafter & 60k pairs & 180k pairs & $\Delta$ [95\% CI] \\
+\midrule
+Heads V0 & 1.497 & 1.510 & $+0.013$ [$+0.010$, $+0.017$] \\
+Heads V1 & 1.514 & 1.518 & $+0.005$ [$+0.002$, $+0.008$] \\
+Heads V2 & 1.505 & 1.517 & \\
+Heads V0 + lexicon filter & 1.529 & 1.538 & \\
+\textbf{Heads V1 + lexicon filter} & 1.533 & \textbf{1.542} & $+0.010$ [$+0.006$, $+0.013$] \\
+\bottomrule
+\end{tabular}
+\caption{Effect of three times more training data (devtest speed-up; continuation-vocabulary heads;
+each system re-tuned on dev). $\Delta$: paired bootstrap, 180k minus 60k.}
+\label{tab:long}
+\end{table}
+
 \paragraph{The tax across tokenizers.} Table~\ref{tab:tax} shows that the size of the problem depends
 on the tokenizer. An Indic-focused tokenizer (Sarvam-1) has almost no tax and only 29\% continuation
 tokens, so our method would have little to refund there; Llama-3 and Qwen3.5 leave a large share.
@@ -357,11 +386,11 @@ the approximate share of tokens that continue a word (on the 8B's own outputs th
 %=====================================================================
 \section{Discussion and limitations}
 
-\paragraph{Refund achieved.} The best system recovers $+0.081$ of the $+0.459$ available, about
-18\% of the refund. The bottleneck is head accuracy: the heads keep only 62\% of the draft model's
+\paragraph{Refund achieved.} The best system recovers $+0.090$ of the $+0.459$ available, about
+20\% of the refund. The bottleneck is head accuracy: the heads keep only 62\% of the draft model's
 correct continuations. Longer training, deeper heads (e.g.\ Hydra-style sequential heads), or heads
-that also condition on the tokens they have proposed are the natural next steps.
-\todo{add the result of the 3\x-data run (Kaggle notebook 07b) if it is run}
+that also condition on the tokens they have proposed are the natural next steps. Tripling the training data helped, but only by $+0.010$,
+so data alone will not close the gap.
 
 \paragraph{Limitations.}
 \begin{itemize}
@@ -385,7 +414,7 @@ Inside Hindi words, Llama-3's draft model is accurate but expensive. Free contin
 raise the lossless speed-up of speculative decoding from 1.45\x{} to 1.91\x, a refund that
 dictionaries cannot claim because completion needs context. Cheap word-completion heads on the
 draft model, restricted to a continuation vocabulary, claim part of it: word-guided training
-beats plain multi-token prediction, and a lexicon filter gives 1.533\x, with output identical to the
+beats plain multi-token prediction, and a lexicon filter gives 1.533\x{} (1.542\x{} with three times more training data), with output identical to the
 target's. Word structure helps once, either learned or looked up.
 
 \bibliographystyle{plainnat}

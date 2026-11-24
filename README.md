@@ -111,6 +111,21 @@ word end / is this a real word" knowledge that V1 otherwise learns through its w
 continuation head. Linguistic knowledge helps either through training (V1) or at inference (lexicon),
 but the two gains don't add up.
 
+**More training data (Kaggle notebook 07b, 180k pairs, `results/wordheads_long/`).** Same grid, re-tuned on dev:
+
+| drafter | 60k | 180k [95% CI] | 180k − 60k (paired) |
+|---|---|---|---|
+| Heads V0 (cv) | 1.497 | 1.510 [1.500, 1.522] | +0.013 [+0.010, +0.017] |
+| Heads V1 (cv) | 1.514 | 1.518 [1.508, 1.530] | +0.005 [+0.002, +0.008] |
+| Heads V2 (cv) | 1.505 | 1.517 [1.507, 1.529] | |
+| Heads V0 + lexicon filter | 1.529 | 1.538 [1.525, 1.551] | |
+| **Heads V1 + lexicon filter** | 1.533 | **1.542 [1.530, 1.555]** | +0.010 [+0.006, +0.013] |
+
+With 180k pairs: V1 − V0 = +0.008 [+0.004, +0.012] (was +0.016), V2 − V1 = −0.001 [−0.004, +0.001],
+V1+lex − V0+lex = +0.005 [+0.001, +0.009], lexicon filter on V1 = +0.024 [+0.019, +0.029]. Head accuracy
+V1 57.2/49.8/43.9%, V0 55.5/42.8/32.7%. More data helps plain heads most, so word guidance is partly a
+data-efficiency gain.
+
 **Lexicon filter.** A head's proposal stops as soon as the current word is no longer the start of a
 word in the lexicon. The lexicon has 72.9k types from the dev 8B outputs plus `../hindi.csv`, and the
 check is a CPU bisect, assumed free. This combines the model's context (heads) with linguistic knowledge
