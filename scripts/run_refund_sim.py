@@ -90,6 +90,12 @@ def main():
         for src in ("cv", "full"):
             grid = [dict(tau_h=th, tau_c=tc) for th in ths for tc in ((None,) if v == "v0" else tcs)]
             lam_then(f"Heads {v.upper()} ({src} vocab)", "heads", grid, variant=v, src=src, gate=gate)
+    # heads + lexicon (model context + linguistic knowledge)
+    if not a.no_dict:
+        for v in ("v0", "v1"):
+            for src, nm in (("lexfilter", "cont. vocab + lexicon filter"), ("lexrerank", "full top-8 + lexicon re-rank")):
+                grid = [dict(tau_h=th, tau_c=tc) for th in ths for tc in ((None,) if v == "v0" else tcs)]
+                lam_then(f"Heads {v.upper()} ({nm})", "heads", grid, variant=v, src=src, gate=gate, lex=lex)
 
     # save
     base = rows["Entropy (Phase 1, lam=-0.683)"]["res"]
@@ -104,7 +110,12 @@ def main():
     comparisons = {}
     for a_, b_ in [("Heads V1 (cv vocab)", "Heads V0 (cv vocab)"), ("Heads V1 (full vocab)", "Heads V0 (full vocab)"),
                    ("Heads V2 (cv vocab)", "Heads V1 (cv vocab)"), ("Heads V1 (cv vocab)", "Heads V0 (full vocab)"),
-                   ("Heads V1 (cv vocab)", "Dictionary, confidence-gated")]:
+                   ("Heads V1 (cv vocab)", "Dictionary, confidence-gated"),
+                   ("Heads V1 (cont. vocab + lexicon filter)", "Heads V1 (cv vocab)"),
+                   ("Heads V1 (full top-8 + lexicon re-rank)", "Heads V1 (full vocab)"),
+                   ("Heads V1 (full top-8 + lexicon re-rank)", "Heads V1 (cv vocab)"),
+                   ("Heads V1 (cont. vocab + lexicon filter)", "Heads V0 (cont. vocab + lexicon filter)"),
+                   ("Heads V0 (cont. vocab + lexicon filter)", "Heads V0 (cv vocab)")]:
         if a_ in rows and b_ in rows:
             ra, rb = rows[a_]["res"], rows[b_]["res"]
             comparisons[f"{a_} - {b_}"] = dict(diff=round(ra[0] - rb[0], 4),

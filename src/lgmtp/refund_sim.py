@@ -142,6 +142,27 @@ class Lexicon:
                     freq[w] = 1
         return cls(freq, tok)
 
+    def tbytes(self, i: int) -> bytes:
+        tb = self.__dict__.setdefault("_tb", {})
+        if i not in tb:
+            from .vocab import token_bytes_list
+            tb[i] = token_bytes_list(self.tok, [i])[0]
+        return tb[i]
+
+    def is_prefix(self, ids) -> bool:
+        """Is the text of these tokens (one word, possibly cut mid-character) the start of a lexicon word?
+        Words that are not Devanagari cannot be judged and pass."""
+        key = tuple(ids)
+        pc = self.__dict__.setdefault("_pc", {})
+        if key not in pc:
+            txt = b"".join(self.tbytes(i) for i in key).decode("utf-8", errors="ignore").strip()
+            if not txt or not DEV_RE.fullmatch(txt):
+                pc[key] = True
+            else:
+                k = bisect.bisect_left(self.words, txt)
+                pc[key] = k < len(self.words) and self.words[k].startswith(txt)
+        return pc[key]
+
     def wtoks(self, w):
         if w not in self._wt:
             self._wt[w] = self.tok.encode(" " + w, add_special_tokens=False)
@@ -209,13 +230,19 @@ def _round_entropy(t, p, cost, lam, beta, kappa=None, correct=None):
     return g, ok, c_draft
 
 
-def _round_heads(t, p, cost, lam, beta, v, src, tau_h, tau_c, gate):
-    """1B drafts a token; heads propose the following tokens; repeat until the entropy rule fires."""
+def _round_heads(t, p, cost, lam, beta, v, src, tau_h, tau_c, gate, lex=None):
+    """1B drafts a token; heads propose the following tokens; repeat until the entropy rule fires.
+    src: "cv"   argmax within the continuation vocabulary (cheap heads);
+         "full" full-vocabulary argmax, a non-continuation token ends the proposal;
+         "lexfilter"  as "cv", but stop once the word stops being a prefix of a lexicon word;
+         "lexrerank"  full-vocabulary top-k: take the best continuation token that keeps the word a
+                      lexicon prefix (needs full-vocabulary heads, so it pays head_rel_full)."""
     n, H, m, y = t.n, t.H, t.match, t.target_ids
     hd = t.heads[v]
     K = hd.cv_id.shape[1]
     log_tau = math.log(tau_h) if tau_h > 0 else -math.inf
-    head_cost = cost.c * (cost.head_rel_cv if src == "cv" else cost.head_rel_full)
+    head_cost = cost.c * (cost.head_rel_cv if src in ("cv", "lexfilter") else cost.head_rel_full)
+    wi = t.labels.get("word_initial")
     in_cv = t._in_cv
     cap = min(GMAX, n - p)
     g, ok, on, pending, c_draft = 0, 0, True, 0, 0.0
@@ -234,13 +261,34 @@ def _round_heads(t, p, cost, lam, beta, v, src, tau_h, tau_c, gate):
             continue
         c_draft += head_cost                           # heads on h_pos propose y[pos+1..pos+K]
         props = []
+        word = None
+        if src.startswith("lex"):                      # current word (true path) up to and including y[pos]
+            j0 = pos
+            while j0 > 0 and not wi[j0]:
+                j0 -= 1
+            word = [int(z) for z in y[j0:pos + 1]]
         for j in range(min(K, cap - g)):
-            if src == "cv":
+            if src in ("cv", "lexfilter"):
                 x, lp = int(hd.cv_id[pos, j]), float(hd.cv_logp[pos, j])
-            else:
+                if src == "lexfilter" and not lex.is_prefix(word + props + [x]):
+                    break
+            elif src == "full":
                 x, lp = int(hd.ids[pos, j, 0]), float(hd.logp[pos, j, 0])
                 if not in_cv[x]:
                     break                              # head predicts a new word
+            else:                                      # lexrerank
+                x = None
+                for r in range(hd.ids.shape[2]):
+                    cand = int(hd.ids[pos, j, r])
+                    if not in_cv[cand]:
+                        if r == 0:
+                            break                      # most likely: a new word starts
+                        continue
+                    if lex.is_prefix(word + props + [cand]):
+                        x, lp = cand, float(hd.logp[pos, j, r])
+                        break
+                if x is None:
+                    break
             if lp < log_tau or (tau_c is not None and hd.cont[pos, j] < tau_c):
                 break
             props.append(x)
@@ -304,7 +352,7 @@ def simulate(traces, mode: str, cost: Cost, lam: float = -0.683, beta: float = B
                 g, ok, cd = _round_entropy(t, p, cost, lam, beta, kappa=kw.get("kappa", 0.05), correct=correct)
             elif mode == "heads":
                 g, ok, cd = _round_heads(t, p, cost, lam, beta, kw["variant"], kw.get("src", "cv"),
-                                         kw.get("tau_h", 0.0), kw.get("tau_c"), kw.get("gate"))
+                                         kw.get("tau_h", 0.0), kw.get("tau_c"), kw.get("gate"), kw.get("lex"))
             elif mode == "dict":
                 g, ok, cd = _round_dict(t, p, cost, lam, beta, kw["lex"], kw["tok"], kw.get("tau", 0.0),
                                         kw.get("min_freq", 1))

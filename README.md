@@ -91,6 +91,9 @@ bootstrap CIs and paired CIs vs Entropy.
 | Heads V0, plain MTP (full vocab) | 1.496 [1.485, 1.506] | [+0.040, +0.047] |
 | **Heads V1, word-guided (continuation vocab)** | **1.514 [1.503, 1.525]** | **[+0.057, +0.066]** |
 | Heads V2, adaptive weights (continuation vocab) | 1.505 [1.496, 1.516] | [+0.050, +0.057] |
+| Heads V1 + lexicon re-rank (full-vocab top-8) | 1.508 [1.497, 1.519] | [+0.051, +0.061] |
+| Heads V0 + lexicon filter (continuation vocab) | 1.529 [1.518, 1.541] | [+0.072, +0.082] |
+| **Heads V1 + lexicon filter (continuation vocab)** | **1.533 [1.521, 1.546]** | **[+0.075, +0.087]** |
 | Ceiling: continuations at 5% of a 1B call | 1.911 [1.894, 1.931] | [+0.449, +0.470] |
 
 Paired differences (devtest):
@@ -98,6 +101,20 @@ Paired differences (devtest):
 - V1 − best V0: +0.018 [+0.014, +0.022].
 - V2 − V1: −0.008 [−0.011, −0.005].
 - V1 − gated dictionary: +0.043 [+0.038, +0.047].
+- V1 + lexicon filter − V1: +0.019 [+0.014, +0.024].
+- V1 + lexicon re-rank − V1 (full vocab): +0.024 [+0.020, +0.028].
+- V0 + lexicon filter − V0: +0.032 [+0.028, +0.036].
+- V1 + lexicon filter − V0 + lexicon filter: +0.004 [−0.001, +0.009], not significant.
+
+With the lexicon filter on, V1 and V0 are statistically tied. The lexicon supplies the "where does the
+word end / is this a real word" knowledge that V1 otherwise learns through its word-guided loss and
+continuation head. Linguistic knowledge helps either through training (V1) or at inference (lexicon),
+but the two gains don't add up.
+
+**Lexicon filter.** A head's proposal stops as soon as the current word is no longer the start of a
+word in the lexicon. The lexicon has 72.9k types from the dev 8B outputs plus `../hindi.csv`, and the
+check is a CPU bisect, assumed free. This combines the model's context (heads) with linguistic knowledge
+(a word list). It is the best system: about +0.08 of the +0.46 available.
 
 Head accuracy on word-continuation tokens along the 8B outputs (`head_accuracy.json`), heads 1/2/3:
 
@@ -169,6 +186,7 @@ scripts/feasibility/         the CPU feasibility simulations behind section 3
   noisy.py                   rho curve (break-even)
   diag.py, ctx.py            whole-word accuracy: dictionary (+context) vs 1B
 kaggle/07_wordheads.ipynb    GPU run: train V0/V1/V2, dump predictions along the 8B outputs, time heads
+kaggle/07b_wordheads_long.ipynb  same with 3x training data (180k pairs, ~2.5 h); optional
 tests/test_wordheads.py      label/collate/loss/data-filter tests
 src/lgmtp/refund_sim.py      exact simulator: entropy, ceiling, rho curve, dictionary, heads
 scripts/run_refund_sim.py    tunes on dev, writes results/wordheads/{main_table.csv,sim_results.json,...}

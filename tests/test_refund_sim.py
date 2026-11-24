@@ -86,3 +86,22 @@ def test_r_q_clipped_and_extended():
 def test_paired_ci_zero_for_identical():
     E, C = np.arange(1, 11.0), np.arange(2, 12.0)
     assert R.paired_ci((E, C), (E, C)) == [0.0, 0.0]
+
+
+class _Lex:
+    def __init__(self, ok):
+        self.ok = ok
+
+    def is_prefix(self, ids):
+        return self.ok
+
+
+def test_lexicon_filter_blocks_or_passes(mk):
+    t = perfect_heads(with_words(mk, wi=WI[:8]))
+    base = R._round_heads(t, 0, unit_cost(), -0.683, 4.0, "v1", "cv", 0.0, 0.5, None)
+    passed = R._round_heads(t, 0, unit_cost(), -0.683, 4.0, "v1", "lexfilter", 0.0, 0.5, None, _Lex(True))
+    blocked = R._round_heads(t, 0, unit_cost(), -0.683, 4.0, "v1", "lexfilter", 0.0, 0.5, None, _Lex(False))
+    assert passed == base
+    assert blocked[2] == pytest.approx(8 * 0.3)       # nothing proposed: the 1B drafts all 8 tokens
+    rr = R._round_heads(t, 0, unit_cost(), -0.683, 4.0, "v1", "lexrerank", 0.0, 0.5, None, _Lex(True))
+    assert rr[:2] == base[:2]

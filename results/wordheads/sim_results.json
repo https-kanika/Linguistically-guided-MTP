@@ -39,6 +39,41 @@
      0.0375,
      0.0472
     ]
+   },
+   "Heads V1 (cont. vocab + lexicon filter) - Heads V1 (cv vocab)": {
+    "diff": 0.0192,
+    "ci": [
+     0.0144,
+     0.0243
+    ]
+   },
+   "Heads V1 (full top-8 + lexicon re-rank) - Heads V1 (full vocab)": {
+    "diff": 0.0236,
+    "ci": [
+     0.0198,
+     0.0276
+    ]
+   },
+   "Heads V1 (full top-8 + lexicon re-rank) - Heads V1 (cv vocab)": {
+    "diff": -0.0058,
+    "ci": [
+     -0.0092,
+     -0.0022
+    ]
+   },
+   "Heads V1 (cont. vocab + lexicon filter) - Heads V0 (cont. vocab + lexicon filter)": {
+    "diff": 0.0039,
+    "ci": [
+     -0.0008,
+     0.009
+    ]
+   },
+   "Heads V0 (cont. vocab + lexicon filter) - Heads V0 (cv vocab)": {
+    "diff": 0.0317,
+    "ci": [
+     0.0277,
+     0.0357
+    ]
    }
   },
   "cost": {
@@ -276,6 +311,82 @@
     "lam": -0.683,
     "tau_h": 0.6,
     "tau_c": 0.5
+   }
+  },
+  {
+   "method": "Heads V0 (cont. vocab + lexicon filter)",
+   "speedup": 1.5288,
+   "ci": [
+    1.5177,
+    1.5412
+   ],
+   "diff_vs_entropy_ci": [
+    0.0725,
+    0.0818
+   ],
+   "tokens_per_round": 2.528,
+   "drafted_per_round": 2.333,
+   "params": {
+    "lam": -0.8,
+    "tau_h": 0.5,
+    "tau_c": null
+   }
+  },
+  {
+   "method": "Heads V0 (full top-8 + lexicon re-rank)",
+   "speedup": 1.512,
+   "ci": [
+    1.5012,
+    1.5236
+   ],
+   "diff_vs_entropy_ci": [
+    0.0557,
+    0.0651
+   ],
+   "tokens_per_round": 2.532,
+   "drafted_per_round": 2.356,
+   "params": {
+    "lam": -0.8,
+    "tau_h": 0.3,
+    "tau_c": null
+   }
+  },
+  {
+   "method": "Heads V1 (cont. vocab + lexicon filter)",
+   "speedup": 1.5327,
+   "ci": [
+    1.521,
+    1.5457
+   ],
+   "diff_vs_entropy_ci": [
+    0.0753,
+    0.0869
+   ],
+   "tokens_per_round": 2.672,
+   "drafted_per_round": 2.776,
+   "params": {
+    "lam": -1.1,
+    "tau_h": 0.4,
+    "tau_c": 0.3
+   }
+  },
+  {
+   "method": "Heads V1 (full top-8 + lexicon re-rank)",
+   "speedup": 1.5077,
+   "ci": [
+    1.4973,
+    1.5192
+   ],
+   "diff_vs_entropy_ci": [
+    0.0515,
+    0.0606
+   ],
+   "tokens_per_round": 2.533,
+   "drafted_per_round": 2.365,
+   "params": {
+    "lam": -0.8,
+    "tau_h": 0.4,
+    "tau_c": 0.3
    }
   }
  ],

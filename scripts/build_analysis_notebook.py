@@ -66,11 +66,13 @@ print("row alignment with Phase-1 traces:", sim["meta"]["alignment"])
 code("""
 order = ["Entropy (Phase 1, lam=-0.683)", "Dictionary (every mid-word position)", "Dictionary, confidence-gated",
          "Heads V0 (full vocab)", "Heads V0 (cv vocab)", "Heads V2 (cv vocab)", "Heads V1 (cv vocab)",
-         "Ceiling: free continuations (kappa=0.05)"]
+         "Heads V1 (full top-8 + lexicon re-rank)", "Heads V0 (cont. vocab + lexicon filter)",
+         "Heads V1 (cont. vocab + lexicon filter)", "Ceiling: free continuations (kappa=0.05)"]
 labels = ["Entropy (Phase 1)", "Dictionary, always", "Dictionary, gated", "V0 heads (full vocab)",
-          "V0 heads (cont. vocab)", "V2 heads (cont. vocab)", "V1 heads (cont. vocab)", "Ceiling (κ = 0.05)"]
+          "V0 heads (cont. vocab)", "V2 heads (cont. vocab)", "V1 heads (cont. vocab)",
+          "V1 heads + lexicon re-rank", "V0 heads + lexicon filter", "V1 heads + lexicon filter", "Ceiling (κ = 0.05)"]
 tt = table.set_index("method").loc[order]
-fig, ax = plt.subplots(figsize=(6.4, 3.4))
+fig, ax = plt.subplots(figsize=(6.6, 4.3))
 y = np.arange(len(order))[::-1]
 for yi, (m, r) in zip(y, tt.iterrows()):
     c = COL[fam(m)]
@@ -214,9 +216,16 @@ md("""
   - **V1 (trained only inside words, with a word-end head): 1.51×**, which is +0.016 over V0 with the
     same vocabulary (paired CI excludes 0);
   - V2 (uncertainty weighting): no further gain.
+- **Model context + linguistic knowledge is best.** Stopping a head's proposal as soon as the word is
+  no longer the start of a real Hindi word (a lexicon built from dev outputs and a word list; a CPU
+  lookup, assumed free) gives **V1 + lexicon filter: 1.533×**, +0.081 over Entropy and +0.019 over V1
+  alone. Re-ranking the full-vocabulary top-8 with the lexicon helps less (1.508×), because the
+  full-vocabulary heads cost 6× more. With the filter, V0 catches up: V0 + lexicon gets 1.529×, and
+  V1 − V0 = +0.004 [−0.001, +0.009]. Word knowledge helps either through training (V1) or at inference
+  (lexicon); the two gains don't stack.
 - **Gating matters.** The heads keep only about 62% of the 1B's correct continuation tokens, below the
   always-propose break-even of about 70%. They still win because they propose only when confident.
-- **Headroom.** The heads recover about +0.06 of the +0.46 available. Their accuracy (54/45/39% for heads
+- **Headroom.** The best system recovers about +0.08 of the +0.46 available. Their accuracy (54/45/39% for heads
   1/2/3) is far below the 1B's (83–86%), and that gap is the clear target for future work.
 """)
 
