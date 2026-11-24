@@ -1,0 +1,218 @@
+{
+ "meta": {
+  "alignment": {
+   "dev": 1.0,
+   "devtest": 1.0
+  },
+  "cost": {
+   "c": 0.3231310483397806,
+   "r_q": {
+    "1": 1.0,
+    "2": 0.9455050656547402,
+    "3": 0.9635991416530042,
+    "4": 0.957309061823959,
+    "5": 0.9685775768087049,
+    "6": 0.9581161554604222,
+    "8": 0.9553509276141328
+   },
+   "head_rel_cv": 0.01769919050456791,
+   "head_rel_full": 0.11413072074523806
+  },
+  "quick": true
+ },
+ "table": [
+  {
+   "method": "Entropy (Phase 1, lam=-0.683)",
+   "speedup": 1.4518,
+   "ci": [
+    1.4436,
+    1.461
+   ],
+   "diff_vs_entropy_ci": [
+    0.0,
+    0.0
+   ],
+   "tokens_per_round": 2.479,
+   "drafted_per_round": 2.102,
+   "params": {
+    "lam": -0.683
+   }
+  },
+  {
+   "method": "Entropy (lam tuned)",
+   "speedup": 1.4518,
+   "ci": [
+    1.4436,
+    1.461
+   ],
+   "diff_vs_entropy_ci": [
+    0.0,
+    0.0
+   ],
+   "tokens_per_round": 2.479,
+   "drafted_per_round": 2.102,
+   "params": {
+    "lam": -0.683
+   }
+  },
+  {
+   "method": "Ceiling: free continuations (kappa=0.0)",
+   "speedup": 1.9087,
+   "ci": [
+    1.8932,
+    1.9267
+   ],
+   "diff_vs_entropy_ci": [
+    0.4485,
+    0.4662
+   ],
+   "tokens_per_round": 2.616,
+   "drafted_per_round": 2.386,
+   "params": {
+    "lam": -0.9,
+    "kappa": 0.0
+   }
+  },
+  {
+   "method": "Ceiling: free continuations (kappa=0.05)",
+   "speedup": 1.8792,
+   "ci": [
+    1.8643,
+    1.8964
+   ],
+   "diff_vs_entropy_ci": [
+    0.4196,
+    0.436
+   ],
+   "tokens_per_round": 2.616,
+   "drafted_per_round": 2.386,
+   "params": {
+    "lam": -0.9,
+    "kappa": 0.05
+   }
+  },
+  {
+   "method": "Heads V0 (cv vocab)",
+   "speedup": 1.476,
+   "ci": [
+    1.4668,
+    1.4865
+   ],
+   "diff_vs_entropy_ci": [
+    0.0196,
+    0.0288
+   ],
+   "tokens_per_round": 2.383,
+   "drafted_per_round": 2.294,
+   "params": {
+    "lam": -0.683,
+    "tau_h": 0.5,
+    "tau_c": null
+   }
+  },
+  {
+   "method": "Heads V0 (full vocab)",
+   "speedup": 1.4955,
+   "ci": [
+    1.4853,
+    1.5064
+   ],
+   "diff_vs_entropy_ci": [
+    0.0402,
+    0.0473
+   ],
+   "tokens_per_round": 2.463,
+   "drafted_per_round": 2.177,
+   "params": {
+    "lam": -0.683,
+    "tau_h": 0.5,
+    "tau_c": null
+   }
+  },
+  {
+   "method": "Heads V1 (cv vocab)",
+   "speedup": 1.5013,
+   "ci": [
+    1.4915,
+    1.5121
+   ],
+   "diff_vs_entropy_ci": [
+    0.0453,
+    0.0535
+   ],
+   "tokens_per_round": 2.439,
+   "drafted_per_round": 2.228,
+   "params": {
+    "lam": -0.683,
+    "tau_h": 0.5,
+    "tau_c": 0.5
+   }
+  },
+  {
+   "method": "Heads V1 (full vocab)",
+   "speedup": 1.4811,
+   "ci": [
+    1.4716,
+    1.4913
+   ],
+   "diff_vs_entropy_ci": [
+    0.0253,
+    0.0331
+   ],
+   "tokens_per_round": 2.448,
+   "drafted_per_round": 2.219,
+   "params": {
+    "lam": -0.683,
+    "tau_h": 0.5,
+    "tau_c": 0.5
+   }
+  },
+  {
+   "method": "Heads V2 (cv vocab)",
+   "speedup": 1.5006,
+   "ci": [
+    1.4909,
+    1.5122
+   ],
+   "diff_vs_entropy_ci": [
+    0.0448,
+    0.0528
+   ],
+   "tokens_per_round": 2.439,
+   "drafted_per_round": 2.231,
+   "params": {
+    "lam": -0.683,
+    "tau_h": 0.5,
+    "tau_c": 0.5
+   }
+  },
+  {
+   "method": "Heads V2 (full vocab)",
+   "speedup": 1.4807,
+   "ci": [
+    1.4714,
+    1.4918
+   ],
+   "diff_vs_entropy_ci": [
+    0.0253,
+    0.0327
+   ],
+   "tokens_per_round": 2.449,
+   "drafted_per_round": 2.224,
+   "params": {
+    "lam": -0.683,
+    "tau_h": 0.5,
+    "tau_c": 0.5
+   }
+  }
+ ],
+ "rho_curve": {
+  "1.0": 1.87919898069759,
+  "0.95": 1.7900285059348522,
+  "0.9": 1.7114449178028415,
+  "0.8": 1.566699343404495,
+  "0.7": 1.4474096766103781,
+  "0.6": 1.3552910661782567,
+  "0.5": 1.2749758195574745
+ }
+}

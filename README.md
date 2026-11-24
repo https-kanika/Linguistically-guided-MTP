@@ -45,7 +45,7 @@ next word   : 1B call -> " में"
 ## 3. Evidence so far (CPU, exact simulation on Phase-1 traces)
 
 All numbers are in [`results/wordheads/feasibility.json`](results/wordheads/feasibility.json) and come
-from `scripts/feasibility/`. Everything was tuned on dev and reported on devtest (997 sentences), with
+from `scripts/feasibility/`. Everything was tuned on dev and reported on devtest (1,012 sentences), with
 bootstrap 95% CIs.
 
 | drafter | speed-up [95% CI] |
@@ -76,6 +76,34 @@ Takeaways:
 - Dictionaries can't reach it, even with oracle context. Gating them gives a small, real gain, which
   makes it the training-free baseline.
 - The heads must keep at least 70% of the 1B's correct continuation tokens to help.
+
+## 3b. Head results (Kaggle run 07 + `scripts/run_refund_sim.py`)
+
+Numbers from `results/wordheads/main_table.csv` (quick tuning grid; the full grid will replace them).
+Devtest, 95% bootstrap CIs, paired CIs vs Entropy.
+
+| drafter | speed-up [95% CI] | diff vs Entropy |
+|---|---|---|
+| Entropy (Phase 1) | 1.452 [1.444, 1.461] | — |
+| Heads V0, plain MTP (full vocab) | 1.496 [1.485, 1.506] | [+0.040, +0.047] |
+| Heads V0, plain MTP (continuation vocab) | 1.476 [1.467, 1.486] | [+0.020, +0.029] |
+| **Heads V1, word-guided (continuation vocab)** | **1.501 [1.492, 1.512]** | **[+0.045, +0.053]** |
+| Heads V2, adaptive weights (continuation vocab) | 1.501 [1.491, 1.512] | [+0.045, +0.053] |
+
+Head accuracy on word-continuation tokens along the 8B outputs (`head_accuracy.json`), heads 1/2/3:
+
+| | head 1 | head 2 | head 3 |
+|---|---|---|---|
+| V0 | 52.4% | 38.9% | 29.2% |
+| V1 | 54.4% | 45.4% | 39.0% |
+| 1B draft model itself | 83.0% | 86.2% | 85.7% |
+
+Measured on a T4: the continuation-vocab heads cost 0.018 of a 1B call. Reading q ≤ 8 tokens costs about
+the same as reading one token (r(q) ≈ 1).
+
+The heads keep only about 62% of the 1B's correct first continuation tokens, below the 70% break-even of
+the ρ curve. They still win because they propose only when confident (τ_h ≈ 0.5), and the ρ curve
+assumes a completer that always proposes.
 
 ## 4. Method
 
@@ -133,7 +161,9 @@ scripts/feasibility/         the CPU feasibility simulations behind section 3
   diag.py, ctx.py            whole-word accuracy: dictionary (+context) vs 1B
 kaggle/07_wordheads.ipynb    GPU run: train V0/V1/V2, dump predictions along the 8B outputs, time heads
 tests/test_wordheads.py      label/collate/loss/data-filter tests
-results/wordheads/           feasibility.json (+ head results after the Kaggle run)
+src/lgmtp/refund_sim.py      exact simulator: entropy, ceiling, rho curve, dictionary, heads
+scripts/run_refund_sim.py    tunes on dev, writes results/wordheads/{main_table.csv,sim_results.json,...}
+results/wordheads/           feasibility.json, main_table.csv, sim_results.json, head_accuracy.json, tuning_dev.csv
 ```
 
 `data/` is git-ignored. The simulations need `data/traces_v2/` (Phase-1 traces) and `../hindi.csv`
@@ -172,7 +202,7 @@ GPU run (Kaggle, one T4, about 1–1.5 h):
 | day | task | status |
 |---|---|---|
 | 1 | `wordheads.py`, Kaggle notebook 07, smoke test, tests | **done** (smoke passes, row alignment 0.996 on CPU) |
-| 2 | `src/lgmtp/refund_sim.py` + tests: promote `scripts/feasibility/` into the package, add the heads modes that read `heads_{split}.npz` | next |
+| 2 | `src/lgmtp/refund_sim.py` + tests, `scripts/run_refund_sim.py` (main table) | **done** (Kaggle run done, heads beat Entropy) |
 | 3 | `notebooks/08_wordheads_analysis.ipynb`: main table with paired CIs, ρ curve with every method placed on it, per-position accuracy V0 vs V1, token-tax table per tokenizer | after the Kaggle run |
 
 Decision points:

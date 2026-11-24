@@ -6,3 +6,4 @@ __pycache__/
 data/
 kaggle/*.zip
 kaggle/results/
+results/*.zip
