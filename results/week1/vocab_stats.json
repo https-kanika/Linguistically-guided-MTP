@@ -1,0 +1,7 @@
+{
+ "texts": 200000,
+ "unit_tokens": 4686855,
+ "unit_types": 142370,
+ "vocab": 47834,
+ "train_coverage": 0.9757517567750655
+}

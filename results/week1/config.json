@@ -1,0 +1,163 @@
+{
+ "OUT_ROOT": "/kaggle/working",
+ "RUN_NAME": "week1",
+ "SMOKE": false,
+ "GIT_HASH": "git=9f1203decd0b src+consts_sha256=d875cf2683fc",
+ "SEED": 0,
+ "MODELS": [
+  {
+   "key": "qwen2.5-1.5b",
+   "names": [
+    "Qwen/Qwen2.5-1.5B-Instruct"
+   ],
+   "dtype": "fp16",
+   "family": "qwen"
+  },
+  {
+   "key": "gemma3-1b",
+   "names": [
+    "google/gemma-3-1b-it",
+    "unsloth/gemma-3-1b-it"
+   ],
+   "dtype": "fp32",
+   "family": "gemma"
+  },
+  {
+   "key": "llama3.2-1b",
+   "names": [
+    "meta-llama/Llama-3.2-1B-Instruct",
+    "unsloth/Llama-3.2-1B-Instruct"
+   ],
+   "dtype": "fp16",
+   "family": "llama3"
+  },
+  {
+   "key": "sarvam1",
+   "names": [
+    "sarvamai/sarvam-1"
+   ],
+   "dtype": "fp16",
+   "family": "sarvam",
+   "prompt_mode": "base"
+  }
+ ],
+ "MIN_MODELS": 3,
+ "N_DEV": null,
+ "N_DEVTEST": null,
+ "N_EXTRA": 3000,
+ "MONO_N": 200000,
+ "MAX_NEW": 256,
+ "GEN_BATCH": 32,
+ "TOPK": 20,
+ "VAL_FRAC": 0.04,
+ "VOCAB_MAX": 50000,
+ "VOCAB_MIN_COUNT": 3,
+ "ARCH": {
+  "d": 256,
+  "layers": 2,
+  "nhead": 4
+ },
+ "PRE_STEPS": 3000,
+ "FT_STEPS": 4000,
+ "INMODEL_STEPS": 3000,
+ "BATCH": 256,
+ "LR": 0.001,
+ "PRE_LR": 0.002,
+ "RUN_AGREE": true,
+ "N_AGREE": 300,
+ "RUN_FOLDS": true,
+ "RUN_L8": true,
+ "PHASE1_DIR": null,
+ "PHASE1_SEARCH": [
+  "/kaggle/input"
+ ],
+ "TARGET8B": [
+  "meta-llama/Meta-Llama-3-8B-Instruct",
+  "NousResearch/Meta-Llama-3-8B-Instruct"
+ ],
+ "COLLECT_8B_IF_MISSING": true,
+ "MAX_MEMORY": {
+  "0": "8GiB",
+  "1": "10GiB"
+ },
+ "GMAX": 16,
+ "TAUS": [
+  0.0,
+  0.01,
+  0.02,
+  0.05,
+  0.1,
+  0.15,
+  0.2,
+  0.3,
+  0.4,
+  0.5,
+  0.6,
+  0.7,
+  0.8,
+  0.9
+ ],
+ "C_HEAD": null,
+ "C_SENS": [
+  0.0,
+  0.02,
+  0.05,
+  0.1,
+  0.2
+ ],
+ "N_BOOT": 1000,
+ "GO_SPEEDUP": 1.6,
+ "GO_RECOVERY": 0.7,
+ "PHASE1_SELECTED": {
+  "Entropy": {
+   "lam": -0.683,
+   "beta": 4.0
+  },
+  "FixedK": {
+   "k": 2
+  }
+ },
+ "PHASE1_MAIN": {
+  "FixedK": {
+   "speedup": 1.3574108550387403,
+   "ci_lo": 1.3499349532907536,
+   "ci_hi": 1.365743221571691,
+   "tokens_per_round": 2.2591073747522383
+  },
+  "Entropy": {
+   "speedup": 1.4518454191605557,
+   "ci_lo": 1.443550863328387,
+   "ci_hi": 1.4610082986779356,
+   "tokens_per_round": 2.478572232012298
+  },
+  "Oracle": {
+   "speedup": 1.9039539381560673,
+   "ci_lo": 1.8948879142501218,
+   "ci_hi": 1.9137577712129188,
+   "tokens_per_round": 3.5773580821473026
+  },
+  "MorphEntropy_ext1": {
+   "speedup": 1.4270224453823808,
+   "ci_lo": 1.4183201789280704,
+   "ci_hi": 1.436941550636568,
+   "tokens_per_round": 2.640121410599465
+  }
+ },
+ "PHASE1_TIMING_FALLBACK": {
+  "t_target": 0.0706,
+  "t_draft": 0.02281305201278851,
+  "c": 0.3231310483397806,
+  "t_target_verify": {
+   "1": 0.07201199999999999,
+   "2": 0.07236499999999998,
+   "3": 0.0730004,
+   "4": 0.07363579999999999,
+   "5": 0.074836,
+   "6": 0.0750478,
+   "7": 0.0752596,
+   "8": 0.0758244
+  },
+  "source": "Phase-1 REPORT.md (fallback)"
+ },
+ "RESUME_FROM": "auto"
+}
