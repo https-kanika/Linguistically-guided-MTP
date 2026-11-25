@@ -1,0 +1,423 @@
+% Draft paper: word-completion heads on the draft model (token-tax refund).
+% Compiles with pdflatex + bibtex (e.g. upload the paper/ folder to Overleaf).
+% TODO markers = things the authors must check or fill in.
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{times}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{natbib}
+\usepackage[hidelinks]{hyperref}
+\usepackage{caption}
+\graphicspath{{figures/}}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\x}{$\times$}
+
+\title{A Partial Refund for the Token Tax:\\
+Cheap Word-Completion Heads for Speculative Decoding in Hindi}
+\author{\todo{author names, affiliations} \\ CS769}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Byte-level BPE tokenizers trained mostly on English split Hindi into many pieces: Llama-3 needs
+2.67 tokens per Hindi word against 1.24 per English word, and 59\% of the tokens Llama-3-8B
+writes in Hindi only continue a word that has already started. In speculative decoding every one
+of these tokens costs a full call of the draft model, even though the draft model predicts them
+with 83--86\% accuracy. We ask how much of this \emph{token tax} can be refunded by drafting
+word continuations more cheaply. Using an exact, teacher-forced simulation of lossless speculative
+decoding (Llama-3-8B-Instruct target, Llama-3.2-1B-Instruct draft) on FLORES English$\to$Hindi,
+we first show that free continuation tokens would raise the speed-up from 1.45\x{} (the best
+entropy-based drafter) to 1.91\x{}, and that dictionaries cannot capture this gain because whole-word
+completion needs model context (31\% accuracy for a prefix dictionary vs.\ 77\% for the draft
+model). We then train small Medusa-style heads on the frozen draft model, restricted to a
+1{,}406-token continuation vocabulary so they cost under 2\% of a draft call. Word-guided training
+(loss only inside words, plus a word-continuation head) beats plain multi-token prediction
+(1.514\x{} vs.\ 1.497\x{}, paired difference $+0.016$ [$+0.012$, $+0.020$]), and filtering head proposals
+with a Hindi lexicon gives 1.533\x{} [1.521, 1.546]. Training on three times more data raises this to
+1.542\x{} [1.530, 1.555], a 6.2\% gain over the entropy baseline with unchanged output. Linguistic knowledge helps either through training or through the
+lexicon at inference time, but the two gains do not add up.
+\end{abstract}
+
+%=====================================================================
+\section{Introduction}
+
+Speculative decoding \citep{leviathan2023fast,chen2023accelerating} speeds up a large \emph{target}
+model by letting a small \emph{draft} model propose several tokens that the target verifies in a
+single forward pass. Because the target accepts exactly the tokens it would have produced itself, the
+output is unchanged; the speed-up depends only on how many tokens are accepted per target pass and
+how much drafting costs.
+
+For languages that the tokenizer serves poorly, both quantities suffer. Hindi in Devanagari is split
+by Llama-3's tokenizer into 2.67 tokens per word (Table~\ref{tab:tax}), so a Hindi sentence costs
+more than twice as many decoding steps as its English translation. Recent work calls this the
+\emph{token tax} and finds that speculative decoding gives no refund for it: acceptance lengths in
+high-fertility languages are not longer, even though many of the extra tokens are predictable
+word pieces \citep{notokenrefund2026}.
+
+We start from a different observation. In our setting the 1B draft model is \emph{very accurate
+inside words}: it agrees with the 8B target on 83--86\% of word-continuation tokens, against about
+66\% at word starts. The problem is not acceptance but price: each continuation token still costs a
+full 1B forward pass (0.32 of an 8B step on our hardware). If the continuation tokens of a word could be
+proposed almost for free, most of the tax would be refunded.
+
+\paragraph{Contributions.}
+\begin{enumerate}
+  \item \textbf{How large is the refund?} With an exact trace-based simulator we show that free
+  continuation tokens of draft-model quality would raise the lossless speed-up from 1.452\x{} to
+  1.911\x{}, and we derive the accuracy a cheap completer needs to break even ($\approx$70\% of
+  the draft model's correct continuations).
+  \item \textbf{Context must come from a model.} Dictionary completers, even with an oracle that
+  knows the reference words, reach at most 47\% whole-word accuracy against 77\% for the draft
+  model. A confidence-gated dictionary gives only a small gain (1.471\x).
+  \item \textbf{Word-completion heads.} Small multi-token heads on the frozen 1B, restricted to a
+  continuation vocabulary, realise part of the refund (1.514\x). Word-guided training beats plain
+  multi-token prediction, and constraining proposals with a lexicon gives the best result (1.533\x;
+  1.542\x{} with three times more training data).
+  \item \textbf{Where knowledge enters matters little.} With the lexicon filter on, word-guided and
+  plain heads are statistically tied: word structure can be supplied by training or by a word list,
+  but not usefully by both.
+\end{enumerate}
+
+%=====================================================================
+\section{Background and related work}
+
+\paragraph{Speculative decoding and decoding heads.}
+Medusa \citep{cai2024medusa} adds extra heads to the target's last hidden state, each predicting a
+token further ahead; Hydra \citep{ankner2024hydra} makes the heads sequentially dependent.
+Multi-token prediction is also used as a training objective \citep{gloeckle2024better}. We use
+Medusa-1 style heads, but on the \emph{draft} model, trained only on positions inside words, and
+evaluated as a cheap supplement to the draft's own LM head rather than a replacement for it.
+
+\paragraph{Retrieval and dictionary drafters.}
+REST \citep{he2024rest} and SuffixDecoding \citep{oliaro2024suffixdecoding} draft from a datastore
+or suffix tree. DictSpec \citep{dictspec2026} drafts Ukrainian and Crimean Tatar from static
+dictionaries and n-grams, and \citet{paudel2026ngram} argue that n-gram drafters win mainly because
+drafting is cheap. Our dictionary baselines reproduce this idea for Hindi and quantify its limit.
+
+\paragraph{Adaptive drafting.}
+Several systems switch between drafters or stop drafting based on confidence
+\citep[e.g.][]{respec2026,talon2026,metasd2025}. Our switch is linguistic: the draft model handles
+word starts, the heads handle word continuations.
+
+\paragraph{Indic languages.}
+\citet{naidu2026phrase} trains phrase- and word-level heads on the target for Indic languages with
+the low-fertility Gemma tokenizer and notes that high-fertility tokenizers were largely untested. We
+work with Llama-3's high-fertility tokenizer and put the heads on the draft.
+
+\paragraph{Our Phase 1.} In earlier work on the same setting we tried to decide \emph{when to stop
+drafting} using word and morpheme boundaries. None of the linguistic stopping rules beat a plain
+entropy rule, which is therefore our baseline. \todo{one sentence on the friend's universal
+word-level head (1.296\x, below Entropy) if it is included in the paper}
+
+%=====================================================================
+\section{Setup and cost model}
+\label{sec:setup}
+
+\paragraph{Models and data.} Target: Llama-3-8B-Instruct; draft: Llama-3.2-1B-Instruct; both in
+fp16 on one NVIDIA T4. Task: English$\to$Hindi translation of FLORES-200 \citep{nllb2022}; we tune all
+hyperparameters on \emph{dev} and report on \emph{devtest} (1{,}012 sentences). For every sentence we
+record the target's greedy output $y$ and, at every position $t$, the draft model's distribution given
+$y_{<t}$ (teacher forcing).
+
+\paragraph{Exact simulation.} Because verification is lossless and greedy, a drafted token $y'_t$ is
+accepted iff it equals $y_t$ and all earlier drafted tokens in the round were accepted. Given the
+recorded draft predictions along $y$, the number of accepted tokens in each round, and therefore the
+whole decoding trajectory, can be computed exactly without running the models. In Phase 1 this
+simulation was within 3--8\% of a real GPU decoding loop. \todo{check this range against the Phase-1
+report}
+
+\paragraph{Cost.} We measure time in units of one target forward. A draft call costs
+$c = t_\text{draft}/t_\text{target} = 0.323$. Verifying $g$ drafted tokens costs
+$v(g) = t_\text{verify}(g)/t_\text{target}$, measured for $g\le 8$ (1.02 to 1.07). Reading $q$
+pending tokens into the draft's KV cache in one call costs $c\,r(q)$ with $r(q)\approx 1$ for $q \le 8$
+(measured). A forward of the $K=3$ heads over the continuation vocabulary costs $0.018\,c$; over the
+full 128k vocabulary it costs $0.114\,c$. The speed-up on a set of sentences is
+\begin{equation}
+S = \frac{\sum_\text{rounds} (a + 1)}{\sum_\text{rounds} \big(C_\text{draft} + v(g)\big)},
+\end{equation}
+where $a$ is the number of accepted drafted tokens in a round (the target always adds one token).
+Confidence intervals are 95\% bootstrap intervals over sentences; differences between two
+systems use a paired bootstrap.
+
+\paragraph{Entropy baseline.} The draft keeps drafting while
+$1-\sqrt{\beta H_t} \ge \lambda$, where $H_t$ is its predictive entropy ($\beta=4$, at most 8 tokens
+per round, $\lambda$ tuned). This gives 1.452\x{} [1.444, 1.461], with 2.48 tokens per target call.
+
+%=====================================================================
+\section{How much tax can be refunded?}
+\label{sec:feasibility}
+
+\paragraph{Ceiling.} Suppose every word-continuation token could be drafted at a cost $\kappa c$ with
+exactly the draft model's prediction. With $\kappa=0$ the speed-up is 1.946\x; with $\kappa = 0.05$
+it is 1.911\x{} [1.894, 1.931], a potential gain of $+0.46$ over Entropy. The refund is thus in the
+cost of drafting, not in acceptance.
+
+\paragraph{Break-even accuracy.} A real completer is less accurate than the draft. If it keeps a
+share $\rho$ of the draft's correct continuation tokens (and always proposes), the speed-up falls
+roughly linearly (Figure~\ref{fig:rho}) and reaches the entropy baseline at $\rho\approx0.7$.
+
+\paragraph{Dictionaries lack context.} Table~\ref{tab:ctx} measures whole-word completion accuracy
+at 38.7k mid-word positions. A prefix dictionary built from 72.9k Hindi word types completes 31\% of
+words correctly; adding the previous word and a sentence cache gives 35\%; even adding the words of
+the reference translation (an oracle) gives only 47\%. The draft model gets 77\%. Used at every
+mid-word position the dictionary drafter is far worse than Entropy (1.226\x); used only when its top
+completion is dominant (at least 60\% of the frequency mass of matching words) it gains a little,
+1.471\x{} [1.462, 1.480].
+
+\begin{table}[t]
+\centering
+\begin{tabular}{lr}
+\toprule
+completer & whole-word accuracy \\
+\midrule
+dictionary, prefix only & 31.3\% \\
+\quad + previous word (bigram) + sentence cache & 34.9\% \\
+\quad + words of the reference translation (oracle) & 47.3\% \\
+1B draft model & \textbf{77.2\%} \\
+\bottomrule
+\end{tabular}
+\caption{Completing the current word from its first token(s), 38.7k mid-word positions of the 8B's
+FLORES dev outputs.}
+\label{tab:ctx}
+\end{table}
+
+%=====================================================================
+\section{Word-completion heads}
+\label{sec:method}
+
+\paragraph{Architecture.} Let $h_t$ be the draft model's last hidden state that predicts $y_t$. We add
+$K=3$ Medusa-1 heads $z_k = h_t + \mathrm{SiLU}(W_k h_t)$ ($W_k$ zero-initialised) followed by the
+frozen, shared LM head of the 1B; head $k$ predicts $y_{t+k}$. At inference the LM head is restricted
+to the \emph{continuation vocabulary}: the 1{,}406 Llama-3 tokens without a leading space or
+word-initial marker, which cover 96.3\% of the target's continuation tokens. This reduces the cost of a
+head from about a quarter of a draft call to under 2\%. A \emph{continuation head}
+$\mathrm{Linear}(d, K)$ predicts whether $y_{t+1..t+k}$ all continue the current word.
+
+\paragraph{Training.} The 1B is frozen. We train with teacher forcing on 60k filtered IITB
+English--Hindi pairs \citep{kunchukuttan2018iitb} using the same translation prompt, batch 32,
+learning rate $10^{-3}$, 1{,}867 steps (31 minutes on a T4). One draft forward per batch trains all
+three variants on identical data:
+\begin{itemize}
+  \item \textbf{V0 (plain MTP):} $\sum_k 0.8^{k-1}\,\mathrm{CE}_k$ at every position.
+  \item \textbf{V1 (word-guided):} $\mathrm{CE}_k$ only where $y_{t+1..t+k}$ continue the current word,
+  plus $0.5\cdot\mathrm{BCE}$ for the continuation head.
+  \item \textbf{V2 (adaptive):} V1's losses combined with learned uncertainty weights
+  \citep{kendall2018multi}.
+\end{itemize}
+
+\paragraph{Drafting.} In each round the draft model drafts a token with its own LM head. If the next
+position is inside a word, the heads propose up to $K$ continuation tokens. A proposal chain stops at
+(i) a word-initial token, (ii) head confidence below $\tau_h$, (iii) for V1/V2, continuation
+probability below $\tau_c$. The proposed tokens are appended to the draft without a draft call;
+the next draft call reads them in one forward (cost $c\,r(1+q)$). The entropy rule ends the round,
+and the target verifies as usual, so the output is unchanged. All thresholds and $\lambda$ are tuned on
+dev by coordinate search.
+
+\paragraph{Lexicon constraints.} We test two ways to inject a word list at inference time.
+\emph{Lexicon filter:} take the argmax over the continuation vocabulary, and stop proposing as soon
+as the current word plus the proposals is no longer a prefix of a word in the lexicon (72.9k types
+from the dev target outputs and a public Hindi word list). The check is a binary search on the CPU and
+we count it as free. \emph{Lexicon re-rank:} among the full-vocabulary top-8 of each head, take the
+most probable token that keeps a lexicon prefix; this needs full-vocabulary heads ($0.114\,c$).
+
+%=====================================================================
+\section{Results}
+\label{sec:results}
+
+\begin{table}[t]
+\centering
+\begin{tabular}{lcc}
+\toprule
+drafter & speed-up [95\% CI] & $\Delta$ vs.\ Entropy [95\% CI] \\
+\midrule
+Entropy (Phase 1) & 1.452 [1.444, 1.461] & --- \\
+Dictionary, every mid-word position & 1.226 [1.218, 1.234] & $-0.226$ [$-0.235$, $-0.217$] \\
+Dictionary, confidence-gated & 1.471 [1.462, 1.480] & $+0.019$ [$+0.017$, $+0.022$] \\
+\midrule
+Heads V0, plain MTP & 1.497 [1.487, 1.508] & $+0.045$ [$+0.042$, $+0.048$] \\
+Heads V1, word-guided & 1.514 [1.503, 1.525] & $+0.062$ [$+0.057$, $+0.066$] \\
+Heads V2, adaptive weights & 1.505 [1.496, 1.516] & $+0.054$ [$+0.050$, $+0.057$] \\
+\midrule
+Heads V1 + lexicon re-rank (full top-8) & 1.508 [1.497, 1.519] & $+0.056$ [$+0.051$, $+0.061$] \\
+Heads V0 + lexicon filter & 1.529 [1.518, 1.541] & $+0.077$ [$+0.072$, $+0.082$] \\
+\textbf{Heads V1 + lexicon filter} & \textbf{1.533 [1.521, 1.546]} & $\mathbf{+0.081}$ [$+0.075$, $+0.087$] \\
+\midrule
+Ceiling: free continuations ($\kappa=0.05$) & 1.911 [1.894, 1.931] & $+0.459$ [$+0.449$, $+0.470$] \\
+\bottomrule
+\end{tabular}
+\caption{Lossless speed-up on FLORES devtest (1{,}012 sentences), Llama-3-8B target, Llama-3.2-1B
+draft. All drafters tuned on dev. Heads use the continuation vocabulary unless stated. $\Delta$: difference
+in speed-up, with a paired bootstrap CI.}
+\label{tab:main}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\linewidth]{fig_main.png}
+\caption{Speed-up with 95\% CIs on devtest for every drafter (Table~\ref{tab:main}).}
+\label{fig:main}
+\end{figure}
+
+\paragraph{Heads beat every baseline.} Table~\ref{tab:main} and Figure~\ref{fig:main} give the main
+results. All head variants beat both Entropy and the gated dictionary; V1 is $+0.043$ [$+0.038$,
+$+0.047$] above the gated dictionary.
+
+\paragraph{Word-guided training helps.} V1 beats V0 on the same vocabulary by $+0.016$ [$+0.012$,
+$+0.020$]. Uncertainty weighting (V2) does not help: V2 is $-0.008$ [$-0.011$, $-0.005$] below V1.
+The full-vocabulary heads are no better than the continuation-vocabulary heads and cost six times
+more (V1: 1.484\x{} vs.\ 1.514\x).
+
+\paragraph{Why do heads help although they are inaccurate?} Table~\ref{tab:acc} shows head accuracy
+on continuation tokens along the target outputs. The heads are far less accurate than the draft
+model, and V1's advantage over V0 grows with distance (39.0\% vs.\ 29.2\% at head 3). The heads keep
+only about 62\% of the draft model's correct first continuations, below the 70\% break-even of the
+$\rho$ curve. They still win because they propose only when confident ($\tau_h\approx0.4$--$0.6$),
+whereas the $\rho$ curve assumes a completer that always proposes. Figure~\ref{fig:rho} places the
+heads above that curve.
+
+\begin{table}[t]
+\centering
+\begin{tabular}{lccc}
+\toprule
+& head 1 & head 2 & head 3 \\
+\midrule
+V0 (plain MTP) & 52.4\% & 38.9\% & 29.2\% \\
+V1 (word-guided) & 54.4\% & 45.4\% & 39.0\% \\
+V2 (adaptive) & 54.2\% & 45.3\% & 39.2\% \\
+1B draft model & 83.0\% & 86.2\% & 85.7\% \\
+\bottomrule
+\end{tabular}
+\caption{Accuracy on word-continuation tokens of the 8B's devtest outputs (39.3k, 17.3k and 7.1k
+positions for distances 1--3). Heads use the continuation vocabulary.}
+\label{tab:acc}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.75\linewidth]{fig_rho.png}
+\caption{Speed-up of an always-proposing completer that keeps a share $\rho$ of the draft model's
+correct continuation tokens. Break-even with Entropy is at $\rho\approx0.7$. Confidence-gated heads
+lie above the curve.}
+\label{fig:rho}
+\end{figure}
+
+\paragraph{Lexicon filtering gives the best system.} Stopping proposals that leave the lexicon adds
+$+0.019$ [$+0.014$, $+0.024$] to V1 and $+0.032$ [$+0.028$, $+0.036$] to V0, and V1 with the
+filter is the best system (1.533\x). The tuned filter systems use lower confidence thresholds and a
+more permissive entropy rule (2.67 vs.\ 2.48 tokens per target call): the lexicon removes the
+proposals that are not real words, so the heads can afford to propose more. Re-ranking the
+full-vocabulary top-8 also helps relative to full-vocabulary heads ($+0.024$), but pays for the
+expensive heads and stays below the filter.
+
+\paragraph{Training and lexicon knowledge do not add up.} With the filter on, V1 and V0 are tied:
+$+0.004$ [$-0.001$, $+0.009$]. The lexicon supplies the knowledge of where a word may end and which
+continuations are real words, which is exactly what V1 learns from its word-restricted loss and
+continuation head. Linguistic knowledge pays off once, through training or through inference, but
+not twice.
+
+\paragraph{Gains track the token tax.} Splitting devtest sentences into quintiles by their share of
+continuation tokens, the gain of V1 over Entropy rises from 3.2\% in the lowest quintile to 5.7\% in
+the highest (Spearman $\rho = 0.18$; Figure~\ref{fig:share}). The more a sentence is taxed, the more
+it is refunded.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.7\linewidth]{fig_gain_by_share.png}
+\caption{Relative gain of V1 heads over Entropy by sentence continuation-token share (devtest
+quintiles).}
+\label{fig:share}
+\end{figure}
+
+\paragraph{More training data.} Table~\ref{tab:long} repeats the head experiments with 180k
+instead of 60k training pairs (5{,}598 steps, 1.8 hours on a T4), re-tuned on dev. All head systems
+improve; the best system reaches 1.542\x{} [1.530, 1.555], $+0.010$ [$+0.006$, $+0.013$] over the
+60k heads. Plain heads gain most (V0: $+0.013$), so the advantage of word-guided training shrinks from
+$+0.016$ to $+0.008$ [$+0.004$, $+0.012$], and V2 is now tied with V1 ($-0.001$ [$-0.004$, $+0.001$]).
+With the lexicon filter, V1 is marginally ahead of V0 ($+0.005$ [$+0.001$, $+0.009$]). Word-guided
+training therefore acts partly as a data-efficiency aid: it gets plain MTP's accuracy with less data,
+and the lexicon filter still adds $+0.024$ [$+0.019$, $+0.029$] on top of V1. Head accuracy rises to
+57.2/49.8/43.9\% for V1 (55.5/42.8/32.7\% for V0), still far below the draft model's 83--86\%.
+
+\begin{table}[t]
+\centering
+\begin{tabular}{lccc}
+\toprule
+drafter & 60k pairs & 180k pairs & $\Delta$ [95\% CI] \\
+\midrule
+Heads V0 & 1.497 & 1.510 & $+0.013$ [$+0.010$, $+0.017$] \\
+Heads V1 & 1.514 & 1.518 & $+0.005$ [$+0.002$, $+0.008$] \\
+Heads V2 & 1.505 & 1.517 & \\
+Heads V0 + lexicon filter & 1.529 & 1.538 & \\
+\textbf{Heads V1 + lexicon filter} & 1.533 & \textbf{1.542} & $+0.010$ [$+0.006$, $+0.013$] \\
+\bottomrule
+\end{tabular}
+\caption{Effect of three times more training data (devtest speed-up; continuation-vocabulary heads;
+each system re-tuned on dev). $\Delta$: paired bootstrap, 180k minus 60k.}
+\label{tab:long}
+\end{table}
+
+\paragraph{The tax across tokenizers.} Table~\ref{tab:tax} shows that the size of the problem depends
+on the tokenizer. An Indic-focused tokenizer (Sarvam-1) has almost no tax and only 29\% continuation
+tokens, so our method would have little to refund there; Llama-3 and Qwen3.5 leave a large share.
+
+\begin{table}[t]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+tokenizer & vocab & Hindi tok/word & English tok/word & continuation share \\
+\midrule
+Llama-3 & 128k & 2.67 & 1.24 & 62.6\% \\
+Qwen3.5 & 248k & 2.16 & 1.26 & 53.7\% \\
+Sarvam-1 & 68k & 1.40 & 1.44 & 28.6\% \\
+\bottomrule
+\end{tabular}
+\caption{Token tax on the FLORES devtest references. Continuation share $= 1 - \text{words}/\text{tokens}$,
+the approximate share of tokens that continue a word (on the 8B's own outputs the measured share is 59\%).
+\todo{Gemma and Aya tokenizers were not available (gated); add if access is granted.}}
+\label{tab:tax}
+\end{table}
+
+%=====================================================================
+\section{Discussion and limitations}
+
+\paragraph{Refund achieved.} The best system recovers $+0.090$ of the $+0.459$ available, about
+20\% of the refund. The bottleneck is head accuracy: the heads keep only 62\% of the draft model's
+correct continuations. Longer training, deeper heads (e.g.\ Hydra-style sequential heads), or heads
+that also condition on the tokens they have proposed are the natural next steps. Tripling the training data helped, but only by $+0.010$,
+so data alone will not close the gap.
+
+\paragraph{Limitations.}
+\begin{itemize}
+  \item \textbf{Simulation, not a real loop.} Speed-ups come from an exact acceptance simulation with
+  measured costs, not from wall-clock runs of a heads-enabled decoder. Acceptance is exact; costs
+  are measured on a T4 but kernel overheads in a real implementation may differ.
+  \item \textbf{Free lexicon lookup.} We count the CPU prefix check as free. It takes microseconds
+  against tens of milliseconds per model call, but it must be overlapped with GPU work in practice.
+  \item \textbf{One language pair, one model family, one GPU.} Results are for English$\to$Hindi with
+  Llama-3 models on a T4 with greedy decoding. Sampling-based verification and other scripts remain
+  untested.
+  \item \textbf{Lexicon from dev outputs.} Part of the lexicon comes from the target's dev outputs;
+  the evaluation is on devtest, but the lexicon reflects the target's vocabulary.
+  \item \textbf{Training data mismatch.} Heads are trained on IITB, while evaluation is on FLORES.
+\end{itemize}
+
+%=====================================================================
+\section{Conclusion}
+
+Inside Hindi words, Llama-3's draft model is accurate but expensive. Free continuation tokens would
+raise the lossless speed-up of speculative decoding from 1.45\x{} to 1.91\x, a refund that
+dictionaries cannot claim because completion needs context. Cheap word-completion heads on the
+draft model, restricted to a continuation vocabulary, claim part of it: word-guided training
+beats plain multi-token prediction, and a lexicon filter gives 1.533\x{} (1.542\x{} with three times more training data), with output identical to the
+target's. Word structure helps once, either learned or looked up.
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}

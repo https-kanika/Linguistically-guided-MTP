@@ -1,0 +1,28 @@
+{
+  "_note": "CPU feasibility numbers on the Phase-1 teacher-forced traces (data/traces_v2, 8B target / 1B draft, Hindi FLORES). Tuning on dev, reported on devtest (997 sentences). Bootstrap 95% CIs (1000 resamples over sentences). Transcribed from the stdout of scripts/feasibility/*.py; refund_sim.py will regenerate this file.",
+  "cost_model": {"c_draft": 0.323, "verify": "timing.json t_target_verify", "rule": "Entropy 1-sqrt(beta*H) < lambda, beta=4", "gmax": 8},
+  "speedup_devtest": {
+    "Entropy (Phase 1), lambda=-0.683": {"value": 1.452, "ci": [1.444, 1.461], "script": "refund_bound.py"},
+    "Upper bound: continuation tokens free (kappa=0)": {"value": 1.946, "script": "refund_bound.py"},
+    "Upper bound: continuation tokens at 5% of a 1B call (kappa=0.05)": {"value": 1.911, "ci": [1.89, 1.93], "script": "refund_bound.py"},
+    "Dictionary completer, every mid-word position": {"value": 1.224, "ci": [1.217, 1.232], "script": "refund_bound.py"},
+    "Dictionary completer, confidence-gated (tau=0.6, lambda=-0.683)": {"value": 1.470, "ci": [1.462, 1.480], "diff_vs_entropy_ci": [0.016, 0.021], "script": "gated.py"}
+  },
+  "rho_curve_devtest": {
+    "_note": "Speed-up when a completer keeps a share rho of the 1B's correct continuation tokens, at kappa=0.05 (noisy.py)",
+    "1.0": 1.911, "0.95": 1.808, "0.9": 1.718, "0.8": 1.567, "0.7": 1.447, "0.6": 1.358, "0.5": 1.280
+  },
+  "whole_word_completion_accuracy_devtest": {
+    "_note": "38,707 mid-word positions with a Devanagari prefix (diag.py, ctx.py)",
+    "prefix only": 0.313,
+    "+ sentence cache": 0.314,
+    "+ bigram": 0.345,
+    "+ cache + bigram": 0.349,
+    "+ oracle reference-word bag": 0.462,
+    "everything combined": 0.473,
+    "1B draft model (whole word)": 0.772,
+    "1B draft model (first continuation token)": 0.831
+  },
+  "share_continuation_tokens_devtest": 0.594,
+  "lexicon_types": 72907
+}

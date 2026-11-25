@@ -1,0 +1,23 @@
+{
+ "Heads V0 (cv vocab)": {
+  "diff": 0.0133,
+  "ci": [
+   0.0097,
+   0.0168
+  ]
+ },
+ "Heads V1 (cv vocab)": {
+  "diff": 0.0045,
+  "ci": [
+   0.0017,
+   0.0078
+  ]
+ },
+ "Heads V1 (cont. vocab + lexicon filter)": {
+  "diff": 0.0095,
+  "ci": [
+   0.0059,
+   0.0132
+  ]
+ }
+}
