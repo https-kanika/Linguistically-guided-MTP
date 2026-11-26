@@ -1,0 +1,15 @@
+{
+ "sentences": 190000,
+ "tokens": 10454718,
+ "order": 4,
+ "vocab": 6932,
+ "contexts": {
+  "1": 4132,
+  "2": 108560,
+  "3": 461279,
+  "4": 842144
+ },
+ "table_mb": 6.0,
+ "table_sha256": "f0dc4321298f0fc7dd838313daef96bf70bc7459baa652c914a97a21750d23bc",
+ "corpus": "cfilt/iitb-english-hindi (week-1 mono)"
+}

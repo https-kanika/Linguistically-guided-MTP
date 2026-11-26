@@ -1,0 +1,64 @@
+{
+ "git_hash": "git=f73985b92d21-dirty src+data_sha256=dbdbcab6a266",
+ "torch": "2.11.0+cu130",
+ "transformers": "5.22.1",
+ "python": "3.13.16",
+ "gpus": [
+  "Tesla T4",
+  "Tesla T4"
+ ],
+ "time": "2026-11-26 00:49:42",
+ "methods": {
+  "NoDraft": {},
+  "Entropy": {
+   "lam": -0.683,
+   "beta": 4.0
+  },
+  "V1+lex": {
+   "lam": -1.1,
+   "beta": 4.0,
+   "variant": "v1",
+   "tau_h": 0.4,
+   "tau_c": 0.3,
+   "lexicon": true
+  },
+  "V1+check": {
+   "lam": -0.8,
+   "beta": 4.0,
+   "variant": "v1",
+   "tau_h": 0.0,
+   "ngram": false,
+   "L": 6
+  },
+  "NGram": {
+   "lam": -0.6,
+   "beta": 4.0,
+   "variant": null,
+   "tau_h": 0.0,
+   "ngram": true,
+   "L": 7
+  },
+  "NGram+V0": {
+   "lam": -0.6,
+   "beta": 4.0,
+   "variant": "v0",
+   "tau_h": 0.5,
+   "ngram": true,
+   "L": 6
+  }
+ },
+ "n_sent": 100,
+ "repeats": 3,
+ "heads_dir": "/kaggle/input/datasets/rakshitsawarniitb/lingumtp/wordheads_07b_180k",
+ "heads_n_train": 180000,
+ "heads_tag": "180k",
+ "lexicon_words": 72797,
+ "wordlist": "/kaggle/input/datasets/rakshitsawarniitb/lingumtp/hindi.csv",
+ "ngram": "/kaggle/input/datasets/rakshitsawarniitb/lingumtp/ngram_hi.npz",
+ "ngram_sha256": "f0dc4321298f",
+ "target": "NousResearch/Meta-Llama-3-8B-Instruct",
+ "draft": "meta-llama/Llama-3.2-1B-Instruct",
+ "smoke": false,
+ "cont_vocab": 1406,
+ "new_decodes": 1800
+}
