@@ -270,7 +270,7 @@ change a notebook, edit `src/lgmtp/` and rebuild with `scripts/build_kaggle_note
 `data/` is git-ignored. Everything the CPU scripts need is either in `results/` (tracked) or in the
 shared Google Drive folder:
 
-**Google Drive: `<link to be added>`** — download and unzip into `data/` so the paths below exist.
+**Google Drive: [data folder](https://drive.google.com/drive/folders/13jKZOti66G2qEAWVm30rxmwf8d_kgEif?usp=sharing)** — download and unzip into `data/` so the paths below exist.
 
 | path | size | what | produced by |
 |---|---|---|---|
