@@ -1,0 +1,34 @@
+{
+ "NGram - V1+lex": {
+  "diff": 0.1507,
+  "lo": 0.1292,
+  "hi": 0.174,
+  "p_better": 1.0,
+  "n_boot": 2000,
+  "seed": 0
+ },
+ "NGram - V1+check": {
+  "diff": 0.1148,
+  "lo": 0.0987,
+  "hi": 0.1321,
+  "p_better": 1.0,
+  "n_boot": 2000,
+  "seed": 0
+ },
+ "V1+check - V1+lex": {
+  "diff": 0.0359,
+  "lo": 0.0201,
+  "hi": 0.0535,
+  "p_better": 1.0,
+  "n_boot": 2000,
+  "seed": 0
+ },
+ "NGram+V0 - NGram": {
+  "diff": 0.0,
+  "lo": -0.0048,
+  "hi": 0.0051,
+  "p_better": 0.5215,
+  "n_boot": 2000,
+  "seed": 0
+ }
+}

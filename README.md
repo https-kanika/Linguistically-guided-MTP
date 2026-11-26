@@ -127,7 +127,7 @@ V1 57.2/49.8/43.9%, V0 55.5/42.8/32.7%. More data helps plain heads most, so wor
 data-efficiency gain.
 
 **Lexicon filter.** A head's proposal stops as soon as the current word is no longer the start of a
-word in the lexicon. The lexicon has 72.9k types from the dev 8B outputs plus `../hindi.csv`, and the
+word in the lexicon. The lexicon has 72.8k types from the dev 8B outputs plus `../hindi.csv`, and the
 check is a CPU bisect, assumed free. This combines the model's context (heads) with linguistic knowledge
 (a word list). It is the best system: about +0.08 of the +0.46 available.
 
@@ -175,10 +175,10 @@ output token `y[t]`.
 
 | paper | what it does | relation to us |
 |---|---|---|
-| **"No Refund for the Token Tax"** (Yang, 2026, alphaxiv 2610.*) | Speculative decoding in 21 languages: high-fertility languages get no *acceptance-length* refund, and acceptance within token types is below English | Our framing. They measure acceptance only; we show the refund is in *drafting cost* (ceiling 1.91× vs 1.45×) |
+| **"No Refund for the Token Tax"** (Yang, 2026, alphaXiv) | Speculative decoding in 21 languages: high-fertility languages get no *acceptance-length* refund, and acceptance within token types is below English | Our framing. They measure acceptance only; we show the refund is in *drafting cost* (ceiling 1.91× vs 1.45×) |
 | **DictSpec** (UNLP 2026) | Static n-gram / dictionary drafter for Ukrainian and Crimean Tatar; up to 1.65× fewer verification steps, 1.76× with prompt-local n-grams | Closest training-free method. Our dictionary rows reproduce the idea for Hindi and show its limit (31–47% word accuracy) |
-| **Naidu** (arXiv 2611.12464) | Phrase/word heads on the target's hidden state, Indic languages on low-fertility Gemma (Hindi 2.09×) | High-fertility tokenizers were "largely unrun". We put heads on the *draft*, under Llama-3's 2.67 tokens/word |
-| **Paudel et al.** (arXiv 2605.30580) | N-gram drafters win mainly because drafting is cheap | Supports the "drafting cost is the lever" argument |
+| **Naidu** (arXiv 2611.12464) | Phrase-level heads on a frozen target. Hindi: 2.09× on Gemma-3-1B and 1.49× on Gemma 4 E2B (low token tax), 1.29× on Qwen3-4B (~5 tokens/word) | We put heads on the *draft*, under Llama-3's 2.67 tokens/word |
+| **Paudel et al.** (arXiv 2605.30580) | N-gram drafters give moderate speed-ups across languages because drafting with them is almost free (from the abstract) | Supports the "drafting cost is the lever" argument |
 | **Medusa / Medusa-2, Hydra, MLP Speculator** | Extra decoding heads on the target, or sequential heads | Our heads are Medusa-1 style, but on the 1B draft and trained only inside words |
 | **REST / CREST, SuffixDecoding** | Retrieval / suffix-tree drafting, hybrids with model drafting | Hybrid switching; ours switches on word structure |
 | **ReSpec, Talon, METASD** | Adaptive switching between drafters by confidence | Our gate is linguistic (word start vs inside) plus confidence |
@@ -193,8 +193,8 @@ high-fertility language.
 PLAN_wordheads.md            active plan (3 coding days, decision points)
 src/lgmtp/wordheads.py       heads, word labels, losses, IITB data, training, prediction dump, timing
 src/lgmtp/{traces,simulator,policies,boundaries}.py   Phase-1 trace loading, cost model, entropy rule
-scripts/build_kaggle_notebooks.py   builds self-contained Kaggle notebooks (`wh` -> 07_wordheads.ipynb)
-scripts/smoke_cpu.py         CPU smoke tests (`--part wh` runs the real 1B for 4 steps)
+scripts/build_kaggle_notebooks.py   builds self-contained Kaggle notebooks (`wh` -> 07_wordheads.ipynb, `wl` -> 09_heads_loop.ipynb)
+scripts/smoke_cpu.py         CPU smoke tests (`--part wh` runs the real 1B for 4 steps, `--part wl` runs notebook 09)
 scripts/feasibility/         the CPU feasibility simulations behind section 3
   refund_bound.py            Entropy, ceiling (free continuations), dictionary completer
   gated.py                   confidence-gated dictionary
@@ -202,6 +202,9 @@ scripts/feasibility/         the CPU feasibility simulations behind section 3
   diag.py, ctx.py            whole-word accuracy: dictionary (+context) vs 1B
 kaggle/07_wordheads.ipynb    GPU run: train V0/V1/V2, dump predictions along the 8B outputs, time heads
 kaggle/07b_wordheads_long.ipynb  same with 3x training data (180k pairs, ~2.5 h); optional
+src/lgmtp/heads_loop.py      real greedy speculative loop with the heads (NoDraft, Entropy, V0-V2, +lexicon)
+kaggle/09_heads_loop.ipynb   GPU run: wall-clock speed of that loop on the 100 Phase-1 real-loop sentences (T4 x2)
+tests/test_heads_loop.py     losslessness, round-by-round equality with refund_sim, resume, input search
 tests/test_wordheads.py      label/collate/loss/data-filter tests
 src/lgmtp/refund_sim.py      exact simulator: entropy, ceiling, rho curve, dictionary, heads
 scripts/run_refund_sim.py    tunes on dev, writes results/wordheads/{main_table.csv,sim_results.json,...}
@@ -216,7 +219,7 @@ results/wordheads/           feasibility.json, main_table.csv, sim_results.json,
 Setup (Windows, from the repo root):
 ```bash
 python -m venv .venv && .venv/Scripts/pip install -e . pytest
-.venv/Scripts/python -m pytest -q                         # 115 passed, 3 skipped
+.venv/Scripts/python -m pytest -q                         # 143 passed, 2 skipped
 .venv/Scripts/python scripts/smoke_cpu.py --part wh       # ~minutes, downloads Llama-3.2-1B (HF token needed)
 ```
 
@@ -228,6 +231,10 @@ Feasibility numbers (CPU; each takes a few minutes, `ctx.py` takes longer):
 .venv/Scripts/python scripts/feasibility/diag.py
 .venv/Scripts/python scripts/feasibility/ctx.py
 ```
+
+Real loop (Kaggle, **T4 ×2**, roughly 1.5–2 h): upload `kaggle/09_heads_loop.ipynb`, attach the output of notebook 07b
+(or its `wordheads.zip` as a Dataset) and a Dataset with `hindi.csv`, secret `HF_TOKEN`, Internet on, *Save & Run All*.
+Unzip `heads_loop.zip` into `results/heads_loop/`. Rebuild with `scripts/build_kaggle_notebooks.py wl`.
 
 GPU run (Kaggle, one T4, about 1–1.5 h):
 1. Rebuild if code changed: `.venv/Scripts/python scripts/build_kaggle_notebooks.py wh`.
@@ -252,5 +259,7 @@ Decision points:
   paper is then a negative-but-quantified result: the 1.91× ceiling, the context finding, the break-even
   curve, and how far MTP heads get.
 - If V1 ≈ V0, word guidance doesn't help MTP heads. We report that.
-- Out of scope: a real GPU decoding loop with heads. The simulation is exact for acceptance and was
-  within 3–8% of the real loop in Phase 1. Listed as a limitation.
+- Real GPU decoding loop with heads: `src/lgmtp/heads_loop.py` + `kaggle/09_heads_loop.ipynb` (built, tested on
+  CPU, **not yet run on Kaggle**). It needs the output of notebook 07b and `hindi.csv` as inputs. Until it has run,
+  all head speed-ups are simulated: acceptance is exact, and in Phase 1 the real loop was 3.4–7.8% below the
+  simulation.

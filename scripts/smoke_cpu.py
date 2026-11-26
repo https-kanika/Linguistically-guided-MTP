@@ -4,6 +4,7 @@
     python scripts/smoke_cpu.py --part 03      # notebook 03: real speculative loop (added in step S5)
     python scripts/smoke_cpu.py --part w1      # notebook 05: week-1 universal head, all stages, tiny models
     python scripts/smoke_cpu.py --part wh      # notebook 07: word-completion heads on the draft model
+    python scripts/smoke_cpu.py --part wl      # notebook 09: real loop with the heads (SmolLM2, runs the built notebook)
 
 Uses meta-llama/Llama-3.2-1B-Instruct as both target and draft (fp32, loaded once), 3 sentences per
 split, MAX_NEW=24. Outputs go to data/smoke/ (gitignored).
@@ -401,9 +402,112 @@ def part_wh() -> None:
     print(f"wordheads smoke test passed ({t1 - t0:.0f}s, resume {time.time() - t1:.0f}s)")
 
 
+def part_wl() -> None:
+    """Notebook 09: real loop with the heads. SmolLM2-135M as target and (noisy) draft, random heads. Executes
+    the *built* notebook's source and data cells (so a missing module or a broken cell shows up here), then
+    heads_loop_main end to end, a resume, and the early failures."""
+    import json
+    import os
+    import torch
+    from lgmtp.wordheads import make_heads
+    name = "HuggingFaceTB/SmolLM2-135M-Instruct"
+    out_root = SMOKE_ROOT / "wl"
+    if out_root.exists():
+        shutil.rmtree(out_root)
+    inp = out_root / "kaggle_input"
+    hd_dir = inp / "nb07b" / "wordheads"
+    hd_dir.mkdir(parents=True)
+    torch.manual_seed(0)
+    h = make_heads(576, 3)
+    for b in h.blocks:
+        torch.nn.init.normal_(b.weight, std=0.05)
+    for v in ("v0", "v1"):
+        torch.save({k: t.half() for k, t in h.state_dict().items()}, hd_dir / f"wordheads_{v}.pt")
+    (hd_dir / "run_info.json").write_text(json.dumps(dict(cfg=dict(N_TRAIN=180000))))
+    (inp / "words").mkdir()
+    (inp / "grams").mkdir()
+    (inp / "words" / "hindi.csv").write_text("word,x\nभारत,1\nभाषा,1\nमौसम,1\nदुनिया,1\n", encoding="utf-8")
+
+    # run the built notebook's cells in a clean namespace (they write and import their own copy of lgmtp)
+    nb = json.loads((ROOT / "kaggle" / "09_heads_loop.ipynb").read_text(encoding="utf-8"))
+    cells = ["".join(c["source"]) for c in nb["cells"] if c["cell_type"] == "code"]
+    src_cell = next(c for c in cells if "LGMTP_SOURCES" in c)
+    data_cell = next(c for c in cells if "_B64 = " in c)
+    cfg_cell = next(c for c in cells if c.startswith("CONFIG"))
+    for c in cells:
+        if not c.startswith("!"):
+            compile(c, "<cell>", "exec")
+    assert repr((ROOT / "src" / "lgmtp" / "heads_loop.py").read_text(encoding="utf-8")) in src_cell, \
+        "notebook 09 is stale: rebuild it (build_kaggle_notebooks.py wl)"
+    ns: dict = {}
+    cwd, path, mods = os.getcwd(), list(sys.path), {k: v for k, v in sys.modules.items() if k.startswith("lgmtp")}
+    os.makedirs(out_root / "nb", exist_ok=True)
+    os.chdir(out_root / "nb")
+    try:
+        exec(src_cell, ns)
+        exec(data_cell, ns)
+        exec(cfg_cell, ns)
+        import lgmtp.heads_loop as HL                    # the notebook's copy
+        assert str(out_root) in HL.__file__, HL.__file__
+        assert len(ns["DATA"]["records"]) == 100 and len(ns["DATA"]["dev_out_ids"]) == 997
+        ms = HL.build_methods(ns["CONFIG"]["METHODS"], ns["PARAMS"]["180k"])
+        names = ["NoDraft", "Entropy", "V1+lex", "V1+check", "NGram", "NGram+V0"]
+        assert [m.name for m in ms] == names and ms[2].tau_h == 0.4 and ms[4].ngram and ms[4].L == 7
+
+        from transformers import AutoTokenizer
+        tok = AutoTokenizer.from_pretrained(name)
+        recs = [dict(id=i, prompt_ids=tok(t).input_ids) for i, t in enumerate(
+            ["हिन्दी: भारत एक देश है। भारत में", "The weather is nice today and", "मौसम अच्छा है। मौसम अच्छा है। मौसम"])]
+        dev = [tok("मौसम अच्छा है").input_ids]
+        from lgmtp.checked import NGram
+        NGram.build([tok("मौसम अच्छा है। मौसम अच्छा है। भारत में एक देश है।").input_ids] * 3, 4).save(inp / "grams" / "ngram_hi.npz")
+        prm = dict(lam=-2.5, tau_h=0.0, tau_c=None, L=6, sim=1.5)
+        cfg = dict(ns["CONFIG"], PARAMS={"180k": {"Entropy": dict(lam=-0.683, sim=1.45), **{k: prm for k in names[2:]}}},
+                   TARGET=name, DRAFT=name, N_SENT=3, REPEATS=2, MAX_NEW=24, SEARCH=[str(inp)],
+                   OUT_ROOT=str(out_root / "working"), TIMING=dict(steps=2, reps=1, max_g=2), SMOKE=True, SMOKE_NOISE=1.5)
+        t0 = time.time()
+        res = HL.heads_loop_main(cfg, recs, dev)
+        rows = {r["method"]: r for r in res["rows"]}
+        assert list(rows) == names and res["info"]["new_decodes"] == 36
+        assert all(r["lossless"] == 1.0 for r in rows.values()), {k: r["lossless"] for k, r in rows.items()}
+        assert all(rows[k]["head_tokens_per_round"] > 0 for k in names[2:]), rows
+        assert res["info"]["ngram_sha256"]
+        assert rows["Entropy"]["drafted_per_round"] > 1 and rows["NoDraft"]["drafted_per_round"] == 0
+        with zipfile.ZipFile(res["zip"]) as z:
+            got = set(z.namelist())
+        assert {"SUMMARY.md", "summary.json", "loop_results.jsonl", "greedy_unbatched.jsonl", "timing.json",
+                "run_info.json", "log.txt"} <= got, got
+        t1 = time.time()
+        # resume from the attached output of a run that died: last line cut off -> one decode is redone
+        prev = out_root / "prev_input"
+        shutil.copytree(out_root / "working" / "heads_loop", prev / "v1" / "heads_loop")
+        f = prev / "v1" / "heads_loop" / "loop_results.jsonl"
+        f.write_text(f.read_text(encoding="utf-8")[:-50], encoding="utf-8")
+        res2 = HL.heads_loop_main(dict(cfg, SEARCH=[str(inp), str(prev)], OUT_ROOT=str(out_root / "working2")), recs, dev)
+        assert res2["info"]["new_decodes"] == 1 and len(res2["rows"]) == 6, res2["info"]["new_decodes"]
+        # early failures, before any model is loaded
+        for missing, what in (("words", "hindi.csv"), ("nb07b", "07b"), ("grams", "ngram_hi.npz")):
+            part = out_root / f"without_{missing}"
+            shutil.copytree(inp, part, ignore=shutil.ignore_patterns(missing))
+            try:
+                HL.heads_loop_main(dict(cfg, SEARCH=[str(part)], OUT_ROOT=str(out_root / "w3"), DRAFT="does/not-exist"),
+                                   recs, dev)
+            except FileNotFoundError as e:
+                assert what in str(e), e
+            else:
+                raise AssertionError(f"no error without {missing}")
+    finally:
+        os.chdir(cwd)
+        sys.path[:] = path
+        for k in [k for k in sys.modules if k.startswith("lgmtp")]:
+            del sys.modules[k]
+        sys.modules.update(mods)
+    print(f"heads-loop smoke test passed ({t1 - t0:.0f}s, resume etc. {time.time() - t1:.0f}s)")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--part", choices=["01", "03", "w1", "dt", "wh"], required=True)
+    ap.add_argument("--part", choices=["01", "03", "w1", "dt", "wh", "wl"], required=True)
     ap.add_argument("--selected", default=None, help="selected_params.json (part 03; default: smoke params)")
     ap.add_argument("--noise", type=float, default=0.0, help="part 03: draft logit noise (exercise rejections)")
     a = ap.parse_args()
@@ -415,6 +519,8 @@ def main() -> None:
         part_dt()
     elif a.part == "wh":
         part_wh()
+    elif a.part == "wl":
+        part_wl()
     else:
         part03(a.selected, a.noise)
 

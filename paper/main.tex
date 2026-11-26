@@ -55,10 +55,10 @@ how much drafting costs.
 
 For languages that the tokenizer serves poorly, both quantities suffer. Hindi in Devanagari is split
 by Llama-3's tokenizer into 2.67 tokens per word (Table~\ref{tab:tax}), so a Hindi sentence costs
-more than twice as many decoding steps as its English translation. Recent work calls this the
-\emph{token tax} and finds that speculative decoding gives no refund for it: acceptance lengths in
-high-fertility languages are not longer, even though many of the extra tokens are predictable
-word pieces \citep{notokenrefund2026}.
+more than twice as many decoding steps as its English translation. Recent work studies this
+\emph{token tax} across 21 languages and finds that speculative decoding with built-in drafters gives
+no refund for it: English gets the most tokens accepted per step, and tokens that continue a word are
+only slightly easier to draft \citep{notokenrefund2026}.
 
 We start from a different observation. In our setting the 1B draft model is \emph{very accurate
 inside words}: it agrees with the 8B target on 83--86\% of word-continuation tokens, against about
@@ -96,9 +96,10 @@ evaluated as a cheap supplement to the draft's own LM head rather than a replace
 
 \paragraph{Retrieval and dictionary drafters.}
 REST \citep{he2024rest} and SuffixDecoding \citep{oliaro2024suffixdecoding} draft from a datastore
-or suffix tree. DictSpec \citep{dictspec2026} drafts Ukrainian and Crimean Tatar from static
-dictionaries and n-grams, and \citet{paudel2026ngram} argue that n-gram drafters win mainly because
-drafting is cheap. Our dictionary baselines reproduce this idea for Hindi and quantify its limit.
+or suffix tree. DictSpec \citep{dictspec2026} drafts Ukrainian and Crimean Tatar from a static
+n-gram table, with gains that grow with tokenizer fertility, and \citet{paudel2026ngram} find that
+n-gram drafters give moderate speed-ups across languages because drafting with them costs almost
+nothing. Our dictionary baselines test this idea for Hindi and quantify its limit.
 
 \paragraph{Adaptive drafting.}
 Several systems switch between drafters or stop drafting based on confidence
@@ -106,21 +107,24 @@ Several systems switch between drafters or stop drafting based on confidence
 word starts, the heads handle word continuations.
 
 \paragraph{Indic languages.}
-\citet{naidu2026phrase} trains phrase- and word-level heads on the target for Indic languages with
-the low-fertility Gemma tokenizer and notes that high-fertility tokenizers were largely untested. We
-work with Llama-3's high-fertility tokenizer and put the heads on the draft.
+\citet{naidu2026phrase} trains phrase-level heads on a frozen target. Its Hindi speed-ups are
+2.09\x{} on Gemma-3-1B and 1.49\x{} on Gemma 4 E2B, but 1.29\x{} on Qwen3-4B, whose tokenizer needs
+about five tokens per Hindi word against 1.5 for Gemma-3. We study another tokenizer with a high token
+tax (Llama-3), and put the heads on the draft model instead of the target.
 
 \paragraph{Our Phase 1.} In earlier work on the same setting we tried to decide \emph{when to stop
 drafting} using word and morpheme boundaries. None of the linguistic stopping rules beat a plain
-entropy rule, which is therefore our baseline. \todo{one sentence on the friend's universal
-word-level head (1.296\x, below Entropy) if it is included in the paper}
+entropy rule, which is therefore our baseline. We also tried a universal word-level head that reads the
+text so far and the target's top candidates as strings, and is trained on the outputs of other LLMs;
+applied zero-shot to the 8B it reached 1.296\x{} [1.287, 1.306], well below the entropy rule.
 
 %=====================================================================
 \section{Setup and cost model}
 \label{sec:setup}
 
 \paragraph{Models and data.} Target: Llama-3-8B-Instruct; draft: Llama-3.2-1B-Instruct; both in
-fp16 on one NVIDIA T4. Task: English$\to$Hindi translation of FLORES-200 \citep{nllb2022}; we tune all
+fp16. The target is split over two NVIDIA T4 GPUs, so every target step includes a transfer between
+GPUs; the draft runs on one of them. Task: English$\to$Hindi translation of FLORES-200 \citep{nllb2022}; we tune all
 hyperparameters on \emph{dev} and report on \emph{devtest} (1{,}012 sentences). For every sentence we
 record the target's greedy output $y$ and, at every position $t$, the draft model's distribution given
 $y_{<t}$ (teacher forcing).
@@ -128,9 +132,10 @@ $y_{<t}$ (teacher forcing).
 \paragraph{Exact simulation.} Because verification is lossless and greedy, a drafted token $y'_t$ is
 accepted iff it equals $y_t$ and all earlier drafted tokens in the round were accepted. Given the
 recorded draft predictions along $y$, the number of accepted tokens in each round, and therefore the
-whole decoding trajectory, can be computed exactly without running the models. In Phase 1 this
-simulation was within 3--8\% of a real GPU decoding loop. \todo{check this range against the Phase-1
-report}
+sequence of committed tokens, can be computed exactly without running the models. Only the number of
+further tokens drafted after a wrong one is approximate, because it uses draft features along $y$; in
+Phase 1 this changed the speed-up by 0.2--1.4\%. In total, a real GPU decoding loop was 3.4--7.8\% below
+the Phase 1 simulation on 100 sentences (Entropy: 1.440\x{} simulated, 1.356\x{} real).
 
 \paragraph{Cost.} We measure time in units of one target forward. A draft call costs
 $c = t_\text{draft}/t_\text{target} = 0.323$. Verifying $g$ drafted tokens costs
@@ -183,7 +188,7 @@ dictionary, prefix only & 31.3\% \\
 \bottomrule
 \end{tabular}
 \caption{Completing the current word from its first token(s), 38.7k mid-word positions of the 8B's
-FLORES dev outputs.}
+FLORES devtest outputs.}
 \label{tab:ctx}
 \end{table}
 
@@ -211,17 +216,18 @@ three variants on identical data:
   \citep{kendall2018multi}.
 \end{itemize}
 
-\paragraph{Drafting.} In each round the draft model drafts a token with its own LM head. If the next
-position is inside a word, the heads propose up to $K$ continuation tokens. A proposal chain stops at
-(i) a word-initial token, (ii) head confidence below $\tau_h$, (iii) for V1/V2, continuation
-probability below $\tau_c$. The proposed tokens are appended to the draft without a draft call;
+\paragraph{Drafting.} In each round the draft model drafts a token with its own LM head. If that token
+contains Devanagari (or is a fragment of a Devanagari character) and the entropy rule does not stop the
+round, the heads propose up to $K$ continuation tokens. A proposal chain stops at (i) a word-initial
+token (possible only for full-vocabulary heads), (ii) head confidence below $\tau_h$, (iii) for V1/V2,
+continuation probability below $\tau_c$. The proposed tokens are appended to the draft without a draft call;
 the next draft call reads them in one forward (cost $c\,r(1+q)$). The entropy rule ends the round,
 and the target verifies as usual, so the output is unchanged. All thresholds and $\lambda$ are tuned on
 dev by coordinate search.
 
 \paragraph{Lexicon constraints.} We test two ways to inject a word list at inference time.
 \emph{Lexicon filter:} take the argmax over the continuation vocabulary, and stop proposing as soon
-as the current word plus the proposals is no longer a prefix of a word in the lexicon (72.9k types
+as the current word plus the proposals is no longer a prefix of a word in the lexicon (72.8k types
 from the dev target outputs and a public Hindi word list). The check is a binary search on the CPU and
 we count it as free. \emph{Lexicon re-rank:} among the full-vocabulary top-8 of each head, take the
 most probable token that keeps a lexicon prefix; this needs full-vocabulary heads ($0.114\,c$).
@@ -379,7 +385,7 @@ Sarvam-1 & 68k & 1.40 & 1.44 & 28.6\% \\
 \end{tabular}
 \caption{Token tax on the FLORES devtest references. Continuation share $= 1 - \text{words}/\text{tokens}$,
 the approximate share of tokens that continue a word (on the 8B's own outputs the measured share is 59\%).
-\todo{Gemma and Aya tokenizers were not available (gated); add if access is granted.}}
+The gated Gemma and Aya tokenizers were not measured.}
 \label{tab:tax}
 \end{table}
 
@@ -393,14 +399,16 @@ that also condition on the tokens they have proposed are the natural next steps.
 so data alone will not close the gap.
 
 \paragraph{Limitations.}
+% Update this item (and the abstract) once kaggle/09_heads_loop.ipynb has run: results/heads_loop/SUMMARY.md.
 \begin{itemize}
   \item \textbf{Simulation, not a real loop.} Speed-ups come from an exact acceptance simulation with
   measured costs, not from wall-clock runs of a heads-enabled decoder. Acceptance is exact; costs
-  are measured on a T4 but kernel overheads in a real implementation may differ.
+  are measured on T4 GPUs, with the target split over two of them, but kernel overheads in a real
+  implementation may differ, and on a single large GPU $c$ would change.
   \item \textbf{Free lexicon lookup.} We count the CPU prefix check as free. It takes microseconds
   against tens of milliseconds per model call, but it must be overlapped with GPU work in practice.
   \item \textbf{One language pair, one model family, one GPU.} Results are for English$\to$Hindi with
-  Llama-3 models on a T4 with greedy decoding. Sampling-based verification and other scripts remain
+  Llama-3 models on T4 GPUs with greedy decoding. Sampling-based verification and other scripts remain
   untested.
   \item \textbf{Lexicon from dev outputs.} Part of the lexicon comes from the target's dev outputs;
   the evaluation is on devtest, but the lexicon reflects the target's vocabulary.
