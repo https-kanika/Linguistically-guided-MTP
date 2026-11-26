@@ -1,21 +1,27 @@
-// Builds slides/token_tax_refund.pptx (black theme, palette from the user's screenshot).
+// Builds slides/token_tax_refund.pptx (seashell theme: Old Copper, Butter Yellow, Nebula, Seashell).
 // Run: NODE_PATH=<dir with node_modules/pptxgenjs> node slides/build_deck.js <path to apply_theme.js>
 // Every number comes from results/ (see the paper, paper/main.tex).
 const pptxgen = require("pptxgenjs");
 const path = require("path");
 const { applyTheme } = require(process.argv[2]);
 
-const P = {                       // palette (screenshot) + black/white
-  black: "000000", panel: "161616", line: "3A3A3A", mute: "A6A6A6", white: "FFFFFF",
-  blue: "0FA3B1", honeydew: "D9E5D6", vanilla: "EDDEA4", toffee: "9E6240",
-  saffron: "FF9B42", blush: "F9B5AC", red: "DD1C1A",
+// Palette: Old Copper 775537, Butter Yellow FBE29D, Nebula C0DDDA, Seashell F1F1F1 (+ ink and two
+// darker shades of the palette for text contrast). Key names are roles kept from the first version:
+// black = background, white = main text, blue = teal accent, saffron = copper accent, blush = gold accent.
+const P = {
+  black: "F1F1F1", panel: "FFFFFF", line: "D6CEC4", mute: "6B6B6B", white: "2B2B2B",
+  blue: "4E8F8A", honeydew: "4A4A4A", vanilla: "775537", toffee: "9A9A9A",
+  saffron: "775537", blush: "A97C22", red: "775537",
+  copper: "775537", butter: "FBE29D", nebula: "C0DDDA", seashell: "F1F1F1",
 };
+// bar fills: lighter palette tones so bars read as areas, text colours stay dark
+const BAR = { [P.blue]: "8FC2BD", [P.honeydew]: "8C8C8C", [P.toffee]: "C9C9C9", [P.blush]: P.butter, [P.saffron]: P.copper };
 const THEME = {
-  name: "Token Tax Black", headFontFace: "Cambria", bodyFontFace: "Calibri",
+  name: "Token Tax Seashell", headFontFace: "Cambria", bodyFontFace: "Calibri",
   colors: {
-    dk1: P.black, lt1: P.white, dk2: P.panel, lt2: P.honeydew,
-    accent1: P.blue, accent2: P.saffron, accent3: P.red, accent4: P.vanilla,
-    accent5: P.blush, accent6: P.toffee, hlink: P.blue, folHlink: P.blush,
+    dk1: P.white, lt1: P.seashell, dk2: P.copper, lt2: P.nebula,
+    accent1: P.copper, accent2: P.butter, accent3: P.nebula, accent4: P.blue,
+    accent5: P.blush, accent6: P.toffee, hlink: P.blue, folHlink: P.copper,
   },
 };
 
@@ -31,20 +37,20 @@ pres.defineSlideMaster({
   title: "DARK_TITLE", background: { color: P.black },
   objects: [
     { placeholder: { options: { name: "title", type: "title", x: 0.8, y: 1.6, w: 11.7, h: 1.5, fontSize: 48,
-      bold: true, color: P.white, valign: "bottom", align: "left", margin: 0 }, text: "" } },
+      bold: true, color: P.copper, valign: "bottom", align: "left", margin: 0 }, text: "" } },
     { placeholder: { options: { name: "body", type: "body", x: 0.8, y: 3.2, w: 11.7, h: 0.9, fontSize: 22,
       color: P.honeydew, valign: "top", margin: 0 }, text: "" } },
   ],
 });
 pres.defineSlideMaster({
-  title: "WHITE_SECTION", background: { color: P.white },
+  title: "WHITE_SECTION", background: { color: P.copper },
   objects: [
     { placeholder: { options: { name: "title", type: "title", x: 0.8, y: 2.9, w: 11.7, h: 1.3, fontSize: 44,
-      bold: true, color: P.black, valign: "bottom", align: "left", margin: 0 }, text: "" } },
+      bold: true, color: P.seashell, valign: "bottom", align: "left", margin: 0 }, text: "" } },
     { placeholder: { options: { name: "body", type: "body", x: 0.8, y: 4.3, w: 11.7, h: 0.8, fontSize: 22,
-      color: P.toffee, valign: "top", margin: 0 }, text: "" } },
+      color: P.butter, valign: "top", margin: 0 }, text: "" } },
   ],
-  slideNumber: { x: 12.3, y: 6.95, w: 0.6, h: 0.3, fontSize: 10, color: "7F7F7F", align: "right" },
+  slideNumber: { x: 12.3, y: 6.95, w: 0.6, h: 0.3, fontSize: 10, color: P.nebula, align: "right" },
 });
 pres.defineSlideMaster({
   title: "DARK_CONTENT", background: { color: P.black },
@@ -84,8 +90,9 @@ function chips(s, x, y, toks, size = 0.95) {
   toks.forEach(([t, kind]) => {
     const w = size * (0.75 + 0.25 * t.length);
     s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: cx, y, w, h: size, rectRadius: 0.1, objectName: `chip${++n}`,
-      fill: { color: kind === "start" ? P.blue : P.saffron }, line: { color: P.black, width: 0 } });
-    tb(s, t, { x: cx, y, w, h: size, fontSize: Math.round(size * 30), bold: true, color: P.black,
+      fill: { color: kind === "start" ? P.copper : P.butter }, line: { color: P.copper, width: 0 } });
+    tb(s, t, { x: cx, y, w, h: size, fontSize: Math.round(size * 30), bold: true,
+      color: kind === "start" ? P.seashell : P.white,
       align: "center", valign: "middle", fontFace: "Nirmala UI" });
     cx += w + 0.12;
   });
@@ -93,7 +100,7 @@ function chips(s, x, y, toks, size = 0.95) {
 }
 function hbar(s, labels, values, colors, o) {
   s.addChart(pres.charts.BAR, [{ name: "speed-up", labels, values }], {
-    barDir: "bar", chartColors: colors, catAxisOrientation: "maxMin",
+    barDir: "bar", chartColors: colors.map((c) => BAR[c] ?? c), catAxisOrientation: "maxMin",
     valAxisMinVal: o.min ?? 1.0, valAxisMaxVal: o.max ?? 2.0, valAxisHidden: true,
     valGridLine: { style: "none" }, catGridLine: { style: "none" },
     showValue: true, dataLabelPosition: "outEnd", dataLabelFormatCode: o.fmt ?? "0.000\"×\"",
@@ -125,8 +132,8 @@ card(s, 0.6, 4.05, 12.1, 2.2, P.line);
 const ex = chips(s, 1.0, 4.45, [["प्र", "start"], ["ति", "cont"], ["योगि", "cont"], ["ता", "cont"]], 0.85);
 tb(s, "“pratiyogita” (competition): 4 tokens, 4 draft-model calls, each 0.32 of an 8B step",
   { x: 1.0, y: 5.5, w: 11.3, h: 0.5, fontSize: 16, color: P.honeydew });
-tb(s, [{ text: "word start", options: { color: P.blue, bold: true, breakLine: true } },
-       { text: "continuation", options: { color: P.saffron, bold: true } }],
+tb(s, [{ text: "word start", options: { color: P.copper, bold: true, breakLine: true } },
+       { text: "continuation", options: { color: P.blush, bold: true } }],
   { x: ex + 0.5, y: 4.45, w: 3, h: 0.85, fontSize: 16, valign: "middle" });
 s.addNotes("The draft is cheap per call but not free; most Hindi tokens are continuation pieces that the draft already predicts well.");
 
@@ -199,15 +206,15 @@ pres.addSection({ title: "Idea 1: heads" });
 s = pres.addSlide({ masterName: "WHITE_SECTION", sectionTitle: "Idea 1: heads" });
 s.addText("Idea 1: teach the draft to finish words", { placeholder: "title" });
 s.addText("Word-completion heads, proposals sent to the 8B unchecked", { placeholder: "body" });
-tb(s, "01", { x: 0.8, y: 1.3, w: 3, h: 1.4, fontSize: 80, bold: true, color: P.blue, fontFace: THEME.headFontFace });
+tb(s, "01", { x: 0.8, y: 1.3, w: 3, h: 1.4, fontSize: 80, bold: true, color: P.butter, fontFace: THEME.headFontFace });
 
 // 8 heads method
 s = content("Word-completion heads on the 1B", "Idea 1: heads");
 const cy = 1.7;
 chips(s, 0.6, cy, [["प्र", "start"]], 1.0);
-tb(s, "1B call", { x: 0.6, y: cy + 1.1, w: 1.6, h: 0.4, fontSize: 14, color: P.blue, bold: true });
+tb(s, "1B call", { x: 0.6, y: cy + 1.1, w: 1.6, h: 0.4, fontSize: 14, color: P.copper, bold: true });
 chips(s, 2.4, cy, [["ति", "cont"], ["योगि", "cont"], ["ता", "cont"]], 1.0);
-tb(s, "3 heads on the same hidden state, ~2% of a call", { x: 2.4, y: cy + 1.1, w: 4.6, h: 0.4, fontSize: 14, color: P.saffron, bold: true });
+tb(s, "3 heads on the same hidden state, ~2% of a call", { x: 2.4, y: cy + 1.1, w: 4.6, h: 0.4, fontSize: 14, color: P.blush, bold: true });
 tb(s, "The next 1B call reads all three in one forward pass, then the 8B verifies as usual.",
   { x: 0.6, y: 3.4, w: 6.4, h: 0.9, fontSize: 17, color: P.honeydew });
 card(s, 7.5, 1.6, 5.2, 4.6, P.line);
@@ -243,7 +250,7 @@ pres.addSection({ title: "Idea 2: checked drafting" });
 s = pres.addSlide({ masterName: "WHITE_SECTION", sectionTitle: "Idea 2: checked drafting" });
 s.addText("Idea 2: let the draft check cheap guesses", { placeholder: "title" });
 s.addText("Checked drafting: the vertical cascade of Chen et al. (2024), applied to Hindi", { placeholder: "body" });
-tb(s, "02", { x: 0.8, y: 1.3, w: 3, h: 1.4, fontSize: 80, bold: true, color: P.saffron, fontFace: THEME.headFontFace });
+tb(s, "02", { x: 0.8, y: 1.3, w: 3, h: 1.4, fontSize: 80, bold: true, color: P.butter, fontFace: THEME.headFontFace });
 
 // 11 checked mechanism
 s = content("Checked drafting", "Idea 2: checked drafting");
@@ -318,7 +325,7 @@ s = content("Cheap to build, robust to overhead", "Real GPUs");
 s.addChart(pres.charts.LINE, [{ name: "4-gram, checked", labels: ["1k", "10k", "60k", "190k"], values: [1.615, 1.668, 1.689, 1.701] }], {
   x: 0.6, y: 1.5, w: 7.4, h: 4.4, chartColors: [P.saffron], lineSize: 3, lineDataSymbol: "circle", lineDataSymbolSize: 10,
   valAxisMinVal: 1.4, valAxisMaxVal: 1.8, valAxisMajorUnit: 0.1, valAxisLabelColor: P.mute, valAxisLabelFontSize: 12, valAxisLabelFontFace: "+mn-lt",
-  valAxisLabelFormatCode: "0.0\"×\"", valGridLine: { color: "333333", size: 0.5 }, catGridLine: { style: "none" },
+  valAxisLabelFormatCode: "0.0\"×\"", valGridLine: { color: "D9D9D9", size: 0.5 }, catGridLine: { style: "none" },
   catAxisLabelColor: P.white, catAxisLabelFontSize: 14, catAxisLabelFontFace: "+mn-lt",
   showValue: true, dataLabelPosition: "t", dataLabelFormatCode: "0.000\"×\"", dataLabelColor: P.white,
   dataLabelFontSize: 13, dataLabelFontFace: "+mn-lt", showLegend: false,
