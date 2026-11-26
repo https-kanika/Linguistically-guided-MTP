@@ -1,4 +1,4 @@
-"""Where do drafts fail? (PLAN T8, fixes B6.)
+"""Where do drafts fail? (fixes B6).
 
 Per-position table built from traces with gold labels attached (``traces.attach_word_labels`` and
 ``morph.token_morph_labels``). Reports descriptive tables and *signed* point-biserial correlations

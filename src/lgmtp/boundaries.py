@@ -1,6 +1,6 @@
 """Token bytes, Devanagari akshara units, word boundaries and per-token cut labels.
 
-Extracted from ``notebooks/legacy/test1_hindi_boundaries.ipynb`` (cell 2). The logic of the
+Extracted from ``notebooks/pre_interim/test1_hindi_boundaries.ipynb`` (cell 2). The logic of the
 legacy functions is unchanged; only type hints / docstrings were added, plus ``token_labels``.
 
 Fixes bug B4 (never decode single byte-level tokens): everything works on token *bytes* and

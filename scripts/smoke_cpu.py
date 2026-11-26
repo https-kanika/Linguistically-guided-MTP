@@ -1,4 +1,4 @@
-"""CPU smoke test of the Kaggle notebook code paths (PLAN rule 2a).
+"""CPU smoke test of the Kaggle notebook code paths.
 
     python scripts/smoke_cpu.py --part 01      # notebook 01: generation, teacher-forced passes, timing, zip
     python scripts/smoke_cpu.py --part 03      # notebook 03: real speculative loop (added in step S5)

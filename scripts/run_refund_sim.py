@@ -1,4 +1,4 @@
-"""Main table for the word-completion heads (PLAN_wordheads.md §3): every drafter tuned on dev,
+"""Main table for the word-completion heads: every drafter tuned on dev,
 reported on devtest with bootstrap CIs and paired CIs vs Entropy.
 
     python scripts/run_refund_sim.py [--quick]

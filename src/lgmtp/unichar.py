@@ -1,4 +1,4 @@
-"""Tokenizer-independent text layer for the universal MTP head (PLAN_phase2_indic_universal_mtp, W1).
+"""Tokenizer-independent text layer for the universal MTP head.
 
 Three pieces, none of which depends on any LLM tokenizer:
 

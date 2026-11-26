@@ -1,4 +1,4 @@
-"""Real greedy draft-and-verify loop, batch size 1, KV caches for both models (PLAN T9).
+"""Real greedy draft-and-verify loop, batch size 1, KV caches for both models.
 
 The *same* policy classes as the simulator run live: ``LiveView`` exposes ``feat`` / ``token`` with
 the simulator's index convention (absolute output positions) and the same causality limit
@@ -279,7 +279,7 @@ def _append_jsonl(path, rec):
 
 
 def notebook03_main(cfg: dict) -> dict:
-    """PLAN T9 steps 1-8 on the GPU (or CPU with SMOKE=True: draft model as both target and draft)."""
+    """Real-loop run on the GPU (or CPU with SMOKE=True: draft model as both target and draft)."""
     import shutil
     from pathlib import Path
     from . import gpu_traces as G

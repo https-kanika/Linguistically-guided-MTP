@@ -1,6 +1,6 @@
 """Trace schema (one target sentence), compressed ``.npz`` save/load, gold-label attachment.
 
-Index convention (PLAN §3): index ``t`` refers to target token ``y[t]``; every draft feature at
+Index convention: index ``t`` refers to target token ``y[t]``; every draft feature at
 ``t`` is a function of ``q_t``, the draft distribution over ``y[t]`` computed teacher-forced on
 ``prompt + y[:t]``.
 

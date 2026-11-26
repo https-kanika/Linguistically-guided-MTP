@@ -1,4 +1,4 @@
-"""PLAN T3 steps 1-4 (local, CPU): inspect MorphTok, build the gold lexicon, train + evaluate the CRF.
+"""Morphology (local, CPU): inspect MorphTok, build the gold lexicon, train + evaluate the CRF.
 
     python scripts/build_morph.py
 

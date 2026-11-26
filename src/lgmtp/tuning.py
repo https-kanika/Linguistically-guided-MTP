@@ -1,8 +1,7 @@
-"""Grid search on FLORES+ dev, evaluation on devtest (PLAN T7, fixes B7, B8).
+"""Grid search on FLORES+ dev, evaluation on devtest (fixes B7, B8).
 
 Every policy family gets a dev grid; selection = best dev speed-up with lookahead charged and the
-measured verify cost. Grids (PLAN T5 table + user decisions of 2026-11-02 for the parts the plan
-leaves open):
+measured verify cost. Grids:
   - "around the entropy best": lam = Entropy's dev-best lam +- 5 steps of Entropy's lam grid,
     beta in all of Entropy's betas.
   - MorphEntropy: tau_morph in {0.1..0.6}, use_akshara in {F, T}, tau_m in {0.3, 0.5} (only with

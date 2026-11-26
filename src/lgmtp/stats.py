@@ -1,4 +1,4 @@
-"""Bootstrap statistics over sentences (PLAN T7.4).
+"""Bootstrap statistics over sentences.
 
 Speed-up on a resample = sum(emitted) / sum(cost) over the resampled sentences (ratio of sums, the
 same estimator as the point value). Paired comparisons use the same resampled indices for both

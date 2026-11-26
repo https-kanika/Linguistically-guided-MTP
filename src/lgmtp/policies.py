@@ -1,4 +1,4 @@
-"""Stopping policies (PLAN T5, T6). Each reads only through ``simulator.TraceView``.
+"""Stopping policies. Each reads only through ``simulator.TraceView``.
 
 Causal (lookahead 0) policies read draft features at indices <= p+g-1. Lookahead-1 policies also read
 index p+g (the next draft distribution q_{p+g}, one extra draft forward; the simulator charges it

@@ -1,280 +1,376 @@
-# Linguistically-guided speculative decoding for Hindi
+# A Refund for the Token Tax: speculative decoding for Hindi
 
-**Current direction: word-completion heads on the draft model ("a refund for the token tax").**
-The detailed task plan is in [`PLAN_wordheads.md`](PLAN_wordheads.md). This README covers the
-motivation, what we know so far, the related work, the code layout, and how to run everything.
+CS769 course project, IIT Bombay.
+
+**One-line summary.** A Hindi word costs Llama-3 about 2.67 tokens, and the draft model pays a full
+forward pass for every one of them. We first tried to make drafting *stop* at linguistic boundaries,
+which did not help. We then made drafting *cheaper*: a Hindi 4-gram proposes the rest of each word and
+the draft model checks those proposals inside the call it makes anyway. This gives **1.620× wall-clock
+speed-up on real GPUs, against 1.384× for the standard entropy rule**. The output is identical to the
+8B model's, and nothing is trained.
+
+Setup throughout: **Llama-3-8B-Instruct target, Llama-3.2-1B-Instruct draft**, English→Hindi
+translation of FLORES+ (tuned on `dev`, 997 sentences; reported on `devtest`, 1,012 sentences), greedy
+decoding (lossless), Kaggle 2× T4 GPUs.
+
+| | |
+|---|---|
+| Paper | [`paper/main.pdf`](paper/main.pdf) (LaTeX source in [`paper/`](paper/)) |
+| Final presentation | [`docs/presentation/CS769_final_presentation.pdf`](docs/presentation/CS769_final_presentation.pdf) (and `.pptx`) |
+| Pre-interim work (proposal, first experiments, interim results) | [`docs/pre_interim/README.md`](docs/pre_interim/README.md) |
+| Phase 1 report (fair re-run of all stopping rules) | [`results/phase1/REPORT.md`](results/phase1/REPORT.md) |
+| Final GPU results | [`results/heads_loop/SUMMARY.md`](results/heads_loop/SUMMARY.md) |
 
 ---
 
-## 1. Background in plain terms
+## Contents
 
-**Speculative decoding.** A big model (Llama-3-8B-Instruct, the *target*) writes the translation, and
-a small model (Llama-3.2-1B-Instruct, the *draft*) guesses a few tokens ahead. The 8B checks all the
-guesses in one forward pass and keeps the longest correct prefix. The output is identical to running
-the 8B alone (lossless). It is faster because one 8B pass can accept several tokens.
+1. [Headline results](#1-headline-results)
+2. [Project timeline](#2-project-timeline)
+3. [Background and method](#3-background-and-method)
+4. [Results by stage](#4-results-by-stage)
+5. [Repository layout](#5-repository-layout)
+6. [Data and large files](#6-data-and-large-files)
+7. [How to reproduce](#7-how-to-reproduce)
+8. [Limitations](#8-limitations)
+9. [References](#9-references)
 
-**The token tax.** Llama-3's tokenizer splits Hindi into many pieces: about **2.67 tokens per word**,
-against about 1.3 for English. **59% of the tokens the 8B writes in Hindi only continue a word that has
-already started.** Every one of those tokens costs a full draft-model call (0.32 of an 8B step).
+---
 
-**Phase 1 (done).** We tried to decide *when to stop drafting* with linguistic rules (word and morpheme
-boundaries). None beat a plain entropy rule (stop when the 1B is uncertain): **1.452× [1.444, 1.461]**
-on FLORES devtest. Report and results: `results/phase1/`.
+## 1. Headline results
 
-**Friend's week 1 (branch `phase2-universal-head`, NO GO).** A universal word-level head that drafts
-whole words reached 1.296× at best (text-only 1.287×, no-Llama 1.211×), below Entropy. It got the
-first word right 66% of the time and later words 14% and 6%. Results: `results/week1/`.
+Wall-clock speed-up over the 8B decoding alone. Real GPU loop: 2× T4, 100 devtest sentences × 3
+repeats, batch size 1. Simulated: exact trace simulation on all 1,012 devtest sentences. 95% bootstrap
+confidence intervals over sentences.
 
-## 2. The idea
-
-The 1B is very accurate *inside* words: it matches the 8B on 81–86% of continuation tokens, against
-66% at word starts. But it still pays full price for every continuation token.
-
-So we let the 1B draft only the **first token of each word** with its normal LM head. Small
-**multi-token heads** on the same hidden state propose the rest of the word almost for free. The 1B
-then reads the completed tokens in one forward (about the cost of one token) and drafts the next word
-start. The 8B verifies as usual, so decoding stays lossless.
-
-```
-word start  : 1B call -> "प्र"          (cost c)
-inside word : heads   -> "ति" "योग" "िता" (cost ~0.02c, read back in the next 1B call)
-next word   : 1B call -> " में"
-8B verifies all drafted tokens in one pass
-```
-
-## 3. Evidence so far (CPU, exact simulation on Phase-1 traces)
-
-All numbers are in [`results/wordheads/feasibility.json`](results/wordheads/feasibility.json) and come
-from `scripts/feasibility/`. Everything was tuned on dev and reported on devtest (1,012 sentences), with
-bootstrap 95% CIs.
-
-| drafter | speed-up [95% CI] |
-|---|---|
-| Entropy, 1B drafts every token (Phase 1) | 1.452 [1.444, 1.461] |
-| **Ceiling**: continuation tokens at 5% of a 1B call, as accurate as the 1B | **1.911 [1.89, 1.93]** |
-| Dictionary completer on every mid-word position | 1.224 [1.217, 1.232] |
-| **Dictionary completer, only when confident** (top word ≥ 60% of the frequency of matching words) | **1.470 [1.462, 1.480]**, +0.018 vs Entropy [+0.016, +0.021] |
-
-**How accurate must a completer be?** The table below assumes the completer keeps a share ρ of the
-1B's correct continuation tokens:
-
-| ρ | 1.0 | 0.95 | 0.9 | 0.8 | **0.7** | 0.6 | 0.5 |
-|---|---|---|---|---|---|---|---|
-| speed-up | 1.91 | 1.81 | 1.72 | 1.57 | **1.45 (break-even)** | 1.36 | 1.28 |
-
-**Context has to come from a model.** Whole-word completion accuracy over 38.7k mid-word positions:
-
-| completer | accuracy |
-|---|---|
-| dictionary, prefix only | 31.3% |
-| + previous word (bigram) + sentence cache | 34.9% |
-| + the reference translation's words (oracle!) | 47.3% |
-| **1B draft model** | **77.2%** |
-
-Takeaways:
-- There is a large, measurable refund available: up to +0.46× over Entropy.
-- Dictionaries can't reach it, even with oracle context. Gating them gives a small, real gain, which
-  makes it the training-free baseline.
-- The heads must keep at least 70% of the 1B's correct continuation tokens to help.
-
-## 3b. Head results (Kaggle run 07 + `scripts/run_refund_sim.py`)
-
-Numbers from `results/wordheads/main_table.csv` (full tuning grid on dev, reported on devtest), with 95%
-bootstrap CIs and paired CIs vs Entropy.
-
-| drafter | speed-up [95% CI] | diff vs Entropy |
+| system | simulated [95% CI] | real GPU [95% CI] |
 |---|---|---|
-| Entropy (Phase 1) | 1.452 [1.444, 1.461] | — |
-| Dictionary, every mid-word position | 1.226 [1.218, 1.234] | [−0.235, −0.217] |
-| Dictionary, confidence-gated | 1.471 [1.462, 1.480] | [+0.017, +0.022] |
-| Heads V0, plain MTP (continuation vocab) | 1.497 [1.487, 1.508] | [+0.042, +0.048] |
-| Heads V0, plain MTP (full vocab) | 1.496 [1.485, 1.506] | [+0.040, +0.047] |
-| **Heads V1, word-guided (continuation vocab)** | **1.514 [1.503, 1.525]** | **[+0.057, +0.066]** |
-| Heads V2, adaptive weights (continuation vocab) | 1.505 [1.496, 1.516] | [+0.050, +0.057] |
-| Heads V1 + lexicon re-rank (full-vocab top-8) | 1.508 [1.497, 1.519] | [+0.051, +0.061] |
-| Heads V0 + lexicon filter (continuation vocab) | 1.529 [1.518, 1.541] | [+0.072, +0.082] |
-| **Heads V1 + lexicon filter (continuation vocab)** | **1.533 [1.521, 1.546]** | **[+0.075, +0.087]** |
-| Ceiling: continuations at 5% of a 1B call | 1.911 [1.894, 1.931] | [+0.449, +0.470] |
+| Entropy rule (stop drafting when the 1B is unsure; baseline) | 1.452 [1.444, 1.461] | 1.384 [1.359, 1.408] |
+| Word-completion heads (V1) + word list, unchecked | 1.542 [1.530, 1.555] | 1.469 [1.433, 1.504] |
+| Word-completion heads (V1), checked by the 1B | 1.572 [1.560, 1.586] | 1.505 [1.467, 1.539] |
+| **Hindi 4-gram, checked by the 1B** | **1.701 [1.687, 1.716]** | **1.620 [1.580, 1.657]** |
+| 4-gram + V0 heads, checked | 1.708 [1.694, 1.724] | 1.620 [1.581, 1.657] |
+| Bound: the 1B's own word completion, checked | 1.857 [1.841, 1.875] | — |
+| Ceiling: continuation tokens at 5% of a 1B call | 1.911 [1.894, 1.931] | — |
 
-Paired differences (devtest):
-- V1 − V0, same (continuation) vocab: +0.016 [+0.012, +0.020].
-- V1 − best V0: +0.018 [+0.014, +0.022].
-- V2 − V1: −0.008 [−0.011, −0.005].
-- V1 − gated dictionary: +0.043 [+0.038, +0.047].
-- V1 + lexicon filter − V1: +0.019 [+0.014, +0.024].
-- V1 + lexicon re-rank − V1 (full vocab): +0.024 [+0.020, +0.028].
-- V0 + lexicon filter − V0: +0.032 [+0.028, +0.036].
-- V1 + lexicon filter − V0 + lexicon filter: +0.004 [−0.001, +0.009], not significant.
+- The checked 4-gram beats the best unchecked heads by **+0.151 [+0.129, +0.174]** on real GPUs.
+- The simulator agrees with the real loop within 1% on the same sentences, for every method.
+- 96% of outputs are token-identical to plain 8B decoding, the same rate as plain decoding against
+  itself. The differences are fp16 near-ties, not speculative decoding.
+- 77% of the 1B calls the 4-gram saves are on word-continuation tokens, which are 59% of all tokens:
+  the gain sits on the token tax.
 
-With the lexicon filter on, V1 and V0 are statistically tied. The lexicon supplies the "where does the
-word end / is this a real word" knowledge that V1 otherwise learns through its word-guided loss and
-continuation head. Linguistic knowledge helps either through training (V1) or at inference (lexicon),
-but the two gains don't add up.
+## 2. Project timeline
 
-**More training data (Kaggle notebook 07b, 180k pairs, `results/wordheads_long/`).** Same grid, re-tuned on dev:
-
-| drafter | 60k | 180k [95% CI] | 180k − 60k (paired) |
+| stage | question | answer | where |
 |---|---|---|---|
-| Heads V0 (cv) | 1.497 | 1.510 [1.500, 1.522] | +0.013 [+0.010, +0.017] |
-| Heads V1 (cv) | 1.514 | 1.518 [1.508, 1.530] | +0.005 [+0.002, +0.008] |
-| Heads V2 (cv) | 1.505 | 1.517 [1.507, 1.529] | |
-| Heads V0 + lexicon filter | 1.529 | 1.538 [1.525, 1.551] | |
-| **Heads V1 + lexicon filter** | 1.533 | **1.542 [1.530, 1.555]** | +0.010 [+0.006, +0.013] |
+| **Before the interim** | | | |
+| Proposal | Should drafts stop at word, morpheme or akshara boundaries instead of after a fixed k tokens? | — | [`docs/pre_interim/`](docs/pre_interim/README.md) |
+| Tokenizer analysis (Test 1) | Do fixed windows cut through Hindi words? | Yes: 2.67 tokens/word, 54.3% of token cuts inside an akshara, 60.6% of 4-token drafts end mid-word | `notebooks/pre_interim/test1_hindi_boundaries.ipynb` |
+| Draft traces, 3B then 8B target | How cheap must the draft be? | With a 3B target a 1B call costs 0.61 of a target step and even the oracle gets 1.40×; with the 8B it costs 0.33 | `notebooks/pre_interim/day2-day3-llama8b-kaggle.ipynb` |
+| Simulator and stopping rules | Which stopping rule is fastest? | Interim: entropy rule 1.452×, linguistic rules below it | `notebooks/pre_interim/lama8b-kaggle-test.ipynb` |
+| **After the interim** | | | |
+| Audit and rebuild (Phase 1) | Were the interim numbers right? | Three linguistic rows were broken (e.g. the "morpheme" rule never used MorphTok). Pipeline rebuilt, all outputs regenerated | [`results/phase1/REPORT.md`](results/phase1/REPORT.md) §3 |
+| Fair re-run + real GPU loop | Does any linguistic stopping rule beat entropy? | No. Best: 1.427× vs 1.452×. Entropy already explains where drafts fail (ΔAUC −0.0001). Real GPUs: entropy 1.356×, same ranking | `results/phase1/` |
+| Universal word-level head | Can one head draft whole words for any LLM? | No-go: 1.296× against a 1.6× target | `results/week1/` |
+| Token-tax analysis | Where is the remaining speed-up? | In the cost of drafting: the 1B is 81–86% right inside words but pays a full call per token. Ceiling 1.911× | `results/wordheads/feasibility.json` |
+| Word-completion heads | Can cheap heads finish the word? | Yes, a little: 1.542× simulated, 1.469× real GPU. Unchecked guesses are often wrong | `results/wordheads/`, `results/wordheads_long/` |
+| Checked drafting | What if the 1B checks cheap guesses? | **1.701× simulated, 1.620× on real GPUs**, with a plain 4-gram and no training | `results/checked/`, `results/heads_loop/` |
 
-With 180k pairs: V1 − V0 = +0.008 [+0.004, +0.012] (was +0.016), V2 − V1 = −0.001 [−0.004, +0.001],
-V1+lex − V0+lex = +0.005 [+0.001, +0.009], lexicon filter on V1 = +0.024 [+0.019, +0.029]. Head accuracy
-V1 57.2/49.8/43.9%, V0 55.5/42.8/32.7%. More data helps plain heads most, so word guidance is partly a
-data-efficiency gain.
+## 3. Background and method
 
-**Lexicon filter.** A head's proposal stops as soon as the current word is no longer the start of a
-word in the lexicon. The lexicon has 72.8k types from the dev 8B outputs plus `../hindi.csv`, and the
-check is a CPU bisect, assumed free. This combines the model's context (heads) with linguistic knowledge
-(a word list). It is the best system: about +0.08 of the +0.46 available.
+**Speculative decoding.** The 1B *draft* model guesses a few tokens ahead, one forward pass per token.
+The 8B *target* checks all of them in one forward pass and keeps the longest agreeing prefix, plus its own
+next token. With greedy decoding the output is exactly what the 8B would write alone.
 
-Head accuracy on word-continuation tokens along the 8B outputs (`head_accuracy.json`), heads 1/2/3:
+**Cost model.** Times are in units of one 8B decoding step. One 1B call costs **c = 0.323**; one 8B check
+of g ≤ 8 drafted tokens costs **v(g) = 1.020–1.074**; a 1B call that reads up to 8 proposed tokens costs
+about the same as one that reads one token. Speed-up over a set of rounds is
 
-| | head 1 | head 2 | head 3 |
-|---|---|---|---|
-| V0 | 52.4% | 38.9% | 29.2% |
-| V1 | 54.4% | 45.4% | 39.0% |
-| 1B draft model itself | 83.0% | 86.2% | 85.7% |
+```
+S = Σ (accepted + 1) / Σ (C_draft + v(g))
+```
 
-Measured on a T4: the continuation-vocab heads cost 0.018 of a 1B call. Reading q ≤ 8 tokens costs about
-the same as reading one token (r(q) ≈ 1).
+**Traces and the exact simulator.** On GPU we record, once, the 8B's greedy outputs and the 1B's
+teacher-forced predictions along them (top-20 distributions, entropy). A CPU simulator then replays any
+drafting method over these traces. Accepted tokens are exact; the only approximation is where a policy
+stops after a wrong guess, which the real loop shows is small. A causality guard raises an error if a
+policy reads anything a real decoder would not know at that point.
 
-The heads keep only about 62% of the 1B's correct first continuation tokens, below the 70% break-even of
-the ρ curve. They still win because they propose only when confident (τ_h ≈ 0.5), and the ρ curve
-assumes a completer that always proposes.
+**The token tax.** Llama-3 splits Hindi into 2.67 tokens per word (English: 1.24), and 59% of the tokens
+the 8B writes only continue a word that has already started. The 1B agrees with the 8B on 66% of
+word-initial tokens but 81–86% of continuation tokens.
 
-## 4. Method
+**Methods compared.**
 
-Position convention (same as the Phase-1 traces): `h_t` is the 1B's last hidden state that predicts
-output token `y[t]`.
-
-- **Heads.** K = 3 Medusa-1 heads: `z_k = h_t + SiLU(W_k h_t)`, with `W_k` zero-initialised, followed by
-  the frozen, shared 1B LM head. Head k predicts `y[t+k]`. At inference the LM head is restricted to the
-  **continuation vocabulary**: 1,406 Llama-3 tokens with no leading space, which cover 96.3% of the
-  8B's continuation tokens. This makes a head cost about 0.015–0.02 of a 1B call instead of 0.25.
-- **Continuation head.** `Linear(d, K)`, which predicts whether `y[t+1..t+k]` all continue the current word.
-- **Training.** The 1B stays frozen. Teacher forcing on 60k filtered IITB en→hi pairs with the Phase-1
-  prompt. One 1B forward per batch trains all three variants on identical data:
-
-| variant | loss |
+| method | how it drafts |
 |---|---|
-| **V0** plain MTP | Σ_k 0.8^(k−1) · CE_k at every position |
-| **V1** word-guided | CE_k only inside the word (`c_k = 1`), + 0.5 · BCE(continuation head) |
-| **V2** adaptive | V1's losses with uncertainty weighting `Σ exp(−s_i) L_i + s_i` |
+| Fixed k | always k tokens |
+| Entropy rule (AdaEDL / SVIP style) | stop when 1 − √(β·H) < λ, H = the 1B's entropy |
+| Linguistic stopping rules | entropy or fixed rules plus word / akshara / morpheme conditions (MorphTok lexicon + CRF segmenter, prefix model) |
+| Universal word-level head | a 14.6M-parameter head that reads an LLM's next-token distribution and drafts whole word units, trained on four small LLMs and used zero-shot on the 8B |
+| Word-completion heads | three Medusa-1 heads `z_k = h + SiLU(W_k h)` on the frozen 1B, over a 1,406-token continuation vocabulary (0.018 of a 1B call). V0: plain multi-token loss; V1: loss only inside words + "does the word go on?" head; V2: V1 with uncertainty weighting. Optional word-list filter |
+| **Checked drafting** | a cheap proposer (Hindi 4-gram from 190k IITB sentences, word trie, or the heads) proposes up to 7 tokens; the 1B reads them in its next call, keeps the prefix it agrees with plus its own next token; the 8B verifies as usual. This is the vertical cascade of Cascade Speculative Drafting (Chen et al., 2024), applied to the token tax |
 
-- **Drafting (simulated exactly on the 8B traces).**
-  - At a word start, the 1B drafts the first token.
-  - The heads then propose the rest of the word. They stop at a word-initial proposal, at low
-    confidence (τ_h), or (V1/V2) when the continuation probability is below τ_c.
-  - The Phase-1 entropy rule ends the round. All thresholds are tuned on dev.
+## 4. Results by stage
 
-## 5. Related work (what we found and how we differ)
+### 4.1 Pre-interim (as presented at the interim)
 
-| paper | what it does | relation to us |
+Full write-up, including what was later corrected: [`docs/pre_interim/README.md`](docs/pre_interim/README.md).
+
+| policy (8B target, interim protocol) | speed-up |
+|---|---|
+| fixed k = 2 | 1.361 |
+| **entropy rule** | **1.452** |
+| word boundary* | 1.335 |
+| morpheme lookup* | 1.066 |
+| hybrid akshara* | 1.287 |
+| oracle (cap 8) | 1.905 |
+
+\* rows later found to be invalid (see 4.2).
+
+### 4.2 Phase 1: audit, fair re-run, real GPU loop — [`results/phase1/`](results/phase1/)
+
+Every policy tuned on dev with comparable grids, look-ahead charged as one 1B call, reported once on
+devtest. Report: [`results/phase1/REPORT.md`](results/phase1/REPORT.md).
+
+| policy | simulated [95% CI] |
+|---|---|
+| Oracle (upper bound) | 1.904 [1.895, 1.914] |
+| **Entropy** | **1.452 [1.444, 1.461]** |
+| Entropy + morpheme rule (morph model consulted) | 1.427 [1.418, 1.437] |
+| Fixed k = 2 | 1.357 [1.350, 1.366] |
+| True word boundaries (oracle) | 1.353 [1.345, 1.361] |
+| Morpheme rule alone | 1.343 [1.335, 1.353] |
+| Entropy + word check (Hybrid) | 1.253 [1.243, 1.264] |
+| Akshara-safe entropy | 1.239 [1.231, 1.249] |
+| Stop at word end (soft / hard) | 1.161 / 1.144 |
+
+- At equal entropy, word-initial tokens are *not* harder (+1.4 points [+0.8, +2.0]); adding word or
+  morpheme position to a confidence-based failure predictor changes AUC by −0.0001.
+- Real GPU loop (100 sentences): entropy 1.356×, entropy + morpheme 1.323×, fixed k = 2 1.304×; same
+  ranking as the simulator, which was 3–8% optimistic in that loop (mainly because the loop drafted past
+  the end of the text; fixed in the final loop).
+
+### 4.3 Universal word-level head — [`results/week1/`](results/week1/)
+
+Verdict **NO GO** ([`SUMMARY.md`](results/week1/SUMMARY.md)): zero-shot 1.296× [1.287, 1.306],
+fine-tuned on the 8B 1.311×, text-only ablation 1.287×, without Llama-family data 1.211×, all below the
+entropy rule (1.452×) and the 1.6× go criterion. Word-unit accuracy: 66% for the next unit, 14% for the
+one after. Guessing the next word is hard; finishing the current one is easy.
+
+### 4.4 Token-tax analysis and word-completion heads — [`results/wordheads/`](results/wordheads/), [`results/wordheads_long/`](results/wordheads_long/)
+
+| drafter (unchecked) | 60k training pairs | 180k pairs [95% CI] |
 |---|---|---|
-| **"No Refund for the Token Tax"** (Yang, 2026, alphaXiv) | Speculative decoding in 21 languages: high-fertility languages get no *acceptance-length* refund, and acceptance within token types is below English | Our framing. They measure acceptance only; we show the refund is in *drafting cost* (ceiling 1.91× vs 1.45×) |
-| **DictSpec** (UNLP 2026) | Static n-gram / dictionary drafter for Ukrainian and Crimean Tatar; up to 1.65× fewer verification steps, 1.76× with prompt-local n-grams | Closest training-free method. Our dictionary rows reproduce the idea for Hindi and show its limit (31–47% word accuracy) |
-| **Naidu** (arXiv 2611.12464) | Phrase-level heads on a frozen target. Hindi: 2.09× on Gemma-3-1B and 1.49× on Gemma 4 E2B (low token tax), 1.29× on Qwen3-4B (~5 tokens/word) | We put heads on the *draft*, under Llama-3's 2.67 tokens/word |
-| **Paudel et al.** (arXiv 2605.30580) | N-gram drafters give moderate speed-ups across languages because drafting with them is almost free (from the abstract) | Supports the "drafting cost is the lever" argument |
-| **Medusa / Medusa-2, Hydra, MLP Speculator** | Extra decoding heads on the target, or sequential heads | Our heads are Medusa-1 style, but on the 1B draft and trained only inside words |
-| **REST / CREST, SuffixDecoding** | Retrieval / suffix-tree drafting, hybrids with model drafting | Hybrid switching; ours switches on word structure |
-| **ReSpec, Talon, METASD** | Adaptive switching between drafters by confidence | Our gate is linguistic (word start vs inside) plus confidence |
+| Entropy (baseline) | 1.452 | 1.452 |
+| Dictionary on every mid-word position | 1.226 | |
+| Dictionary, confidence-gated | 1.471 | |
+| Heads V0 | 1.497 | 1.510 [1.500, 1.522] |
+| Heads V1 (word-guided) | 1.514 | 1.518 [1.508, 1.530] |
+| Heads V2 (adaptive weights) | 1.505 | 1.517 [1.507, 1.529] |
+| **Heads V1 + word-list filter** | 1.533 | **1.542 [1.530, 1.555]** |
+| Ceiling: continuations at 5% of a 1B call | 1.911 | |
 
-The gap we fill: nobody has measured how much of the token tax is *recoverable through cheaper drafting
-inside words*. Nobody has tested whether word-aware training of MTP heads (V1) beats plain MTP (V0) in a
-high-fertility language.
+- Whole-word completion accuracy: dictionary 31%, + bigram + cache 35%, + reference words 47%, the 1B 77%.
+  Context has to come from a model.
+- Head accuracy on continuation tokens (180k): V1 57 / 50 / 44%, V0 56 / 43 / 33%, the 1B 83–86%.
+- 3× more training data adds only +0.010 (V1 + word list). V1 − V0 = +0.008 [+0.004, +0.012].
+- Figures: `results/wordheads/fig_*.png`; analysis notebook `notebooks/08_wordheads_analysis.ipynb`.
 
-## 6. Repository layout (current work)
+### 4.5 Checked drafting — [`results/checked/`](results/checked/)
+
+| checked proposer | simulated [95% CI] |
+|---|---|
+| V0 heads | 1.568 [1.556, 1.581] |
+| V1 heads | 1.572 [1.560, 1.586] |
+| Word trie + previous and next word | 1.659 [1.646, 1.673] |
+| **Hindi 4-gram** | **1.701 [1.687, 1.716]** |
+| 4-gram + V0 heads | 1.708 [1.694, 1.724] |
+
+- 4-gram training data: 1k sentences 1.615, 10k 1.668, 60k 1.689, 190k 1.701; only the 8B's 997 dev
+  outputs: 1.660.
+- Robust to overhead: if a 1B call that reads proposals were 5 / 10 / 20% dearer, 1.677 / 1.654 / 1.610.
+- The gain grows with the share of continuation tokens in a sentence (Spearman 0.21).
+- Checked drafting recovers 54% of the gap between entropy and the ceiling.
+
+### 4.6 Final real GPU loop — [`results/heads_loop/`](results/heads_loop/)
+
+See section 1 and [`SUMMARY.md`](results/heads_loop/SUMMARY.md). Per-decode logs:
+`loop_results.jsonl`; paired differences: `paired_wall.json`; simulator vs real: `sim_vs_real.csv`.
+
+## 5. Repository layout
 
 ```
-PLAN_wordheads.md            active plan (3 coding days, decision points)
-src/lgmtp/wordheads.py       heads, word labels, losses, IITB data, training, prediction dump, timing
-src/lgmtp/{traces,simulator,policies,boundaries}.py   Phase-1 trace loading, cost model, entropy rule
-scripts/build_kaggle_notebooks.py   builds self-contained Kaggle notebooks (`wh` -> 07_wordheads.ipynb, `wl` -> 09_heads_loop.ipynb)
-scripts/smoke_cpu.py         CPU smoke tests (`--part wh` runs the real 1B for 4 steps, `--part wl` runs notebook 09)
-scripts/feasibility/         the CPU feasibility simulations behind section 3
-  refund_bound.py            Entropy, ceiling (free continuations), dictionary completer
-  gated.py                   confidence-gated dictionary
-  noisy.py                   rho curve (break-even)
-  diag.py, ctx.py            whole-word accuracy: dictionary (+context) vs 1B
-kaggle/07_wordheads.ipynb    GPU run: train V0/V1/V2, dump predictions along the 8B outputs, time heads
-kaggle/07b_wordheads_long.ipynb  same with 3x training data (180k pairs, ~2.5 h); optional
-src/lgmtp/heads_loop.py      real greedy speculative loop (NoDraft, Entropy, V0-V2, +lexicon, checked drafting)
-src/lgmtp/checked.py         checked drafting: token n-gram table + exact simulator (the 1B checks proposals in its next call)
-scripts/run_checked_sim.py   builds data/ngram_hi.npz, tunes checked drafting on dev -> results/checked/
-scripts/checked_analysis.py  saved calls by token type, gain by continuation share, data/cost figures, sim vs real
-scripts/feasibility/checked_wordtrie.py   word-trie proposers, checked (results/checked/wordtrie.csv)
-kaggle/09_heads_loop.ipynb   GPU run: wall-clock speed of that loop on the 100 Phase-1 real-loop sentences (T4 x2)
-results/heads_loop/          output of notebook 09 (SUMMARY.md, summary.json, paired_wall.json, sim_vs_real.csv)
-tests/test_heads_loop.py     losslessness, round-by-round equality with the simulators, resume, input search
-tests/test_wordheads.py      label/collate/loss/data-filter tests
-src/lgmtp/refund_sim.py      exact simulator: entropy, ceiling, rho curve, dictionary, heads
-scripts/run_refund_sim.py    tunes on dev, writes results/wordheads/{main_table.csv,sim_results.json,...}
-results/wordheads/           feasibility.json, main_table.csv, sim_results.json, head_accuracy.json, tuning_dev.csv
+README.md                      this file
+pyproject.toml                 package `lgmtp` (pip install -e .)
+paper/                         paper: main.tex, sec_checked.tex, sec_real.tex, refs.bib, figures/, main.pdf
+docs/
+  presentation/                final slides (.pptx with embedded fonts, .pdf)
+  pre_interim/                 proposal, plan, first experiments, interim results, interim slide corrections
+src/lgmtp/                     all logic (imported by scripts, notebooks and the generated Kaggle notebooks)
+  boundaries.py                word / akshara / UTF-8 boundaries on byte spans (tokenizer analysis)
+  vocab.py, traces.py          token classes; trace loading, gold labels on the target's text
+  gpu_traces.py                GPU: 8B greedy outputs, teacher-forced draft/target traces, timing
+  simulator.py                 exact trace simulator, cost model, causality guard (TraceView)
+  policies.py                  stopping policies (fixed k, entropy, word / akshara / morpheme, hybrids, oracles)
+  morph.py                     MorphTok loader, gold lexicon, CRF segmenter, causal prefix model
+  tuning.py, stats.py          dev grids, devtest evaluation, sentence bootstrap and paired CIs
+  analysis.py                  where drafts fail; entropy-controlled comparisons; failure prediction (AUC)
+  spec_loop.py                 Phase 1 real draft-and-verify loop with KV caches
+  week1.py, unihead.py, unichar.py, uni_features.py, uni_sim.py, collect.py
+                               universal word-level head: data collection over 4 LLMs, model, simulator, verdict
+  drafter_tf.py                1B teacher-forced along the 8B outputs, multi-token timing
+  wordheads.py                 word-completion heads: labels, losses, IITB data, training, prediction dump
+  refund_sim.py                exact simulator for refund drafters (ceiling, dictionary, heads, word list)
+  checked.py                   checked drafting: token n-gram table and exact simulator
+  heads_loop.py                final real GPU loop (NoDraft, Entropy, heads, word list, checked methods)
+scripts/
+  download_morphtok.py         put MorphTok hindi.csv into data/morphtok/ and record its provenance
+  build_morph.py               gold morpheme lexicon + CRF segmenter (results/phase1/morph_*)
+  make_report.py               writes results/phase1/REPORT.md from the result files
+  build_kaggle_notebooks.py    generates the self-contained notebooks in kaggle/ from src/lgmtp
+  smoke_cpu.py                 CPU smoke tests of the Kaggle code paths
+  feasibility/                 refund_bound.py (ceiling, dictionary), gated.py, noisy.py (rho curve),
+                               diag.py / ctx.py (whole-word accuracy), checked_wordtrie.py
+  run_refund_sim.py            word-completion heads main table (results/wordheads*, --heads-dir/--out)
+  build_analysis_notebook.py   builds notebooks/08_wordheads_analysis.ipynb
+  run_checked_sim.py           builds the 4-gram table, tunes checked drafting (results/checked/)
+  checked_analysis.py          saved calls by token type, gain by continuation share, data/cost curves
+kaggle/                        GPU notebooks, as run (generated; outputs kept)
+  01_traces_v2.ipynb           8B outputs + traces + timing (dev, devtest)
+  03_real_loop.ipynb           Phase 1 real loop
+  05_week1_universal_head.ipynb   universal word-level head, kill test
+  06_drafter_traces.ipynb      1B traces + multi-token timing for the refund simulation
+  07_wordheads.ipynb           train heads V0/V1/V2 (60k pairs), dump predictions, timing
+  07b_wordheads_long.ipynb     same with 180k pairs
+  09_heads_loop.ipynb          final real GPU loop
+notebooks/                     CPU analysis notebooks, as run
+  00_tokenizer_analysis.ipynb  tokenizer analysis (re-run of Test 1)
+  02_policies_v2.ipynb         labels, tuning on dev, evaluation on devtest, failure analysis
+  04_real_loop_analysis.ipynb  Phase 1 real loop: losslessness, simulator vs real
+  08_wordheads_analysis.ipynb  word-completion heads: figures and tables
+  pre_interim/                 the three original notebooks behind the interim results, unchanged
+results/
+  phase1/                      REPORT.md, main_table.csv, grid_*.csv, analysis_*, morph_*, real_loop_*, plots
+  week1/                       universal head: SUMMARY.md, verdict.json, l8*.csv, lomo*.csv, agreement.csv
+  wordheads/                   feasibility.json, main_table.csv, head_accuracy.*, rho_curve.csv, token_tax.csv, fig_*.png
+  wordheads_long/              180k-pair heads: main_table.csv, paired_vs_60k.json, head_accuracy.json
+  checked/                     main_table.csv, wordtrie.csv, gain_by_share.csv, where_saved.json, ngram_info.json
+  heads_loop/                  final GPU loop: SUMMARY.md, summary.json, paired_wall.json, sim_vs_real.csv, logs
+tests/                         unit tests (pytest): boundaries, causality of every policy, simulators,
+                               losslessness and round-by-round equality of the real loops, statistics
 ```
 
-`data/` is git-ignored. The simulations need `data/traces_v2/` (Phase-1 traces) and `../hindi.csv`
-(the Hindi word list, one folder above the repo).
+Each Kaggle notebook embeds the exact `src/lgmtp` code it ran (its first cell prints the git hash). To
+change a notebook, edit `src/lgmtp/` and rebuild with `scripts/build_kaggle_notebooks.py`.
 
-## 7. How to run
+## 6. Data and large files
 
-Setup (Windows, from the repo root):
+`data/` is git-ignored. Everything the CPU scripts need is either in `results/` (tracked) or in the
+shared Google Drive folder:
+
+**Google Drive: `<link to be added>`** — download and unzip into `data/` so the paths below exist.
+
+| path | size | what | produced by |
+|---|---|---|---|
+| `data/traces_v2/` | 32 MB | 8B outputs and 1B/8B teacher-forced traces for dev and devtest, timing | `kaggle/01_traces_v2.ipynb` |
+| `data/real_loop/` | 10 MB | Phase 1 real-loop logs | `kaggle/03_real_loop.ipynb` |
+| `data/wordheads/` | 107 MB | heads V0/V1/V2 (60k pairs) and their predictions along the 8B outputs | `kaggle/07_wordheads.ipynb` |
+| `data/wordheads_long/` | 107 MB | same with 180k pairs | `kaggle/07b_wordheads_long.ipynb` |
+| `data/ngram_hi.npz` | 6 MB | the Hindi 4-gram table | `scripts/run_checked_sim.py` |
+| `data/week1/` (`sources.json`, per-model traces) | | universal-head data collection | `kaggle/05_week1_universal_head.ipynb` |
+
+External inputs:
+- **MorphTok** `hindi.csv` (Hindi morpheme segmentations, `karthika95/morphTok` on Hugging Face):
+  `python scripts/download_morphtok.py --hf`. Several scripts also read it as `../hindi.csv`, one folder
+  above the repository; copy it there.
+- **FLORES+** (`openlanguagedata/flores_plus`, gated) and the **Llama** models (gated) need a Hugging Face
+  token with access. The IITB English–Hindi corpus is downloaded automatically.
+
+## 7. How to reproduce
+
+### 7.1 Setup and tests
+
 ```bash
-python -m venv .venv && .venv/Scripts/pip install -e . pytest
-.venv/Scripts/python -m pytest -q                         # 152 passed, 2 skipped
-.venv/Scripts/python scripts/smoke_cpu.py --part wh       # ~minutes, downloads Llama-3.2-1B (HF token needed)
+python -m venv .venv
+.venv/Scripts/pip install -e . pytest        # Linux/macOS: .venv/bin/pip
+.venv/Scripts/python -m pytest -q             # 151 passed, 3 skipped (the skipped ones need gated tokenizers)
 ```
 
-Feasibility numbers (CPU; each takes a few minutes, `ctx.py` takes longer):
+Python 3.11. CPU-only PyTorch is enough for everything outside Kaggle.
+
+### 7.2 GPU runs (Kaggle)
+
+Upload the notebook, set the accelerator, turn Internet on, add the secret `HF_TOKEN`, then
+*Save & Run All*. Each notebook's first cell lists its inputs and outputs.
+
+| order | notebook | GPU, approx. time | output → put into |
+|---|---|---|---|
+| 1 | `kaggle/01_traces_v2.ipynb` (run with `SPLIT="dev"`, then `"devtest"`) | 2× T4 | `data/traces_v2/` |
+| 2 | `kaggle/03_real_loop.ipynb` | 2× T4 | `data/real_loop/` |
+| 3 | `kaggle/05_week1_universal_head.ipynb` | 2× T4 (resumable) | `results/week1/`, `data/week1/` |
+| 4 | `kaggle/06_drafter_traces.ipynb` (input: output of 3) | 1× T4, ~20 min | refund simulation inputs |
+| 5 | `kaggle/07_wordheads.ipynb` / `07b_wordheads_long.ipynb` | 1× T4, ~1 h / ~2.5 h | `data/wordheads/`, `data/wordheads_long/` |
+| 6 | `kaggle/09_heads_loop.ipynb` (dataset with the 180k heads, `hindi.csv`, `ngram_hi.npz`) | 2× T4, ~2 h | `results/heads_loop/` |
+
+### 7.3 CPU analysis (from the repository root)
+
 ```bash
-.venv/Scripts/python scripts/feasibility/refund_bound.py
-.venv/Scripts/python scripts/feasibility/gated.py
-.venv/Scripts/python scripts/feasibility/noisy.py
-.venv/Scripts/python scripts/feasibility/diag.py
-.venv/Scripts/python scripts/feasibility/ctx.py
+# Tokenizer analysis
+jupyter nbconvert --execute --to notebook --inplace notebooks/00_tokenizer_analysis.ipynb
+
+# Phase 1: morphology, tuning, evaluation, real-loop analysis, report
+python scripts/download_morphtok.py
+python scripts/build_morph.py
+jupyter nbconvert --execute --to notebook --inplace notebooks/02_policies_v2.ipynb
+jupyter nbconvert --execute --to notebook --inplace notebooks/04_real_loop_analysis.ipynb
+python scripts/make_report.py
+
+# Token-tax analysis and word-completion heads
+python scripts/feasibility/refund_bound.py
+python scripts/feasibility/gated.py
+python scripts/feasibility/noisy.py
+python scripts/feasibility/diag.py
+python scripts/feasibility/ctx.py
+python scripts/run_refund_sim.py
+python scripts/run_refund_sim.py --heads-dir data/wordheads_long --out results/wordheads_long
+python scripts/build_analysis_notebook.py      # then execute notebooks/08_wordheads_analysis.ipynb
+
+# Checked drafting (sources.json = the IITB Hindi sentences collected by notebook 05;
+# without --sources they are downloaded)
+python scripts/run_checked_sim.py --sources data/week1/data/sources.json
+python scripts/checked_analysis.py
+python scripts/feasibility/checked_wordtrie.py
 ```
 
-Checked drafting (CPU, a few minutes each; needs `../week1/data/sources.json`, the IITB Hindi sentences):
-```bash
-.venv/Scripts/python scripts/run_checked_sim.py --sources ../week1/data/sources.json
-.venv/Scripts/python scripts/checked_analysis.py
-.venv/Scripts/python scripts/feasibility/checked_wordtrie.py
-```
+Every script writes into `results/`, and every number in the paper and the slides comes from a file
+there.
 
-Real loop (Kaggle, **T4 ×2**, about 2 h): upload `kaggle/09_heads_loop.ipynb`, attach a Dataset with
-`wordheads_07b_180k.zip` (or the output of notebook 07b), `hindi.csv` and `ngram_hi.npz`, secret `HF_TOKEN`,
-Internet on, *Save & Run All*. Unzip `heads_loop.zip` into `results/heads_loop/`. Rebuild with
-`scripts/build_kaggle_notebooks.py wl`.
+## 8. Limitations
 
-GPU run (Kaggle, one T4, about 1–1.5 h):
-1. Rebuild if code changed: `.venv/Scripts/python scripts/build_kaggle_notebooks.py wh`.
-2. Upload `kaggle/07_wordheads.ipynb` to Kaggle. Settings: GPU T4 ×1, Internet on, and add the secret
-   `HF_TOKEN`, which needs access to `meta-llama/Llama-3.2-1B-Instruct`. The notebook falls back to
-   `unsloth/Llama-3.2-1B-Instruct`.
-3. Run all. Download `/kaggle/working/wordheads.zip` and unzip it into `data/wordheads/`. It contains
-   `wordheads_{v0,v1,v2}.pt`, `heads_{dev,devtest}.npz`, `train_info.json`, `run_info.json`, `log.txt`.
-4. Sanity check (done locally by `refund_sim.py`): `draft_argmax` in `heads_devtest.npz` should match the
-   Phase-1 traces' `draft_argmax` on ≥ 99% of positions.
+- One language pair (English→Hindi), one model pair (Llama-3 8B / 3.2 1B), one domain (FLORES+).
+- Real-GPU numbers are on 100 sentences at batch size 1, on 2× T4 (the 8B is split across two GPUs, so
+  every target step includes a transfer). Absolute speed-ups would differ on one large GPU.
+- No English control yet, so we cannot say how much larger the gain is for Hindi than for a low-tax
+  language.
+- The checking mechanism itself is known (cascaded drafting); the contribution is the token-tax analysis
+  and showing where the gain comes from.
+- 31% of morpheme labels come from the CRF segmenter, whose accuracy on unseen stems is probably below
+  its held-out F1 (0.927).
 
-## 8. Status and next steps
+## 9. References
 
-| day | task | status |
-|---|---|---|
-| 1 | `wordheads.py`, Kaggle notebook 07, smoke test, tests | **done** (smoke passes, row alignment 0.996 on CPU) |
-| 2 | `src/lgmtp/refund_sim.py` + tests, `scripts/run_refund_sim.py` (main table) | **done** (Kaggle run done, heads beat Entropy) |
-| 3 | `notebooks/08_wordheads_analysis.ipynb` (built by `scripts/build_analysis_notebook.py`): main table, ρ curve with the heads placed on it, head accuracy, training curves, gain by sentence, token-tax table; figures `results/wordheads/fig_*.png` | **done** |
+Main related work (full list in [`paper/refs.bib`](paper/refs.bib)):
 
-Decision points:
-- If the heads keep less than 70% of the 1B's correct continuation tokens, there is no speed-up. The
-  paper is then a negative-but-quantified result: the 1.91× ceiling, the context finding, the break-even
-  curve, and how far MTP heads get.
-- If V1 ≈ V0, word guidance doesn't help MTP heads. We report that.
-- Real GPU decoding loop: **done** (notebook 09, 2×T4, 100 sentences × 3). Wall-clock vs NoDraft: Entropy 1.384,
-  V1 + lexicon 1.469, V1 checked 1.505, **4-gram checked 1.620** [1.580, 1.657], 4-gram + V0 checked 1.620. The
-  checked 4-gram (no training) beats V1 + lexicon by +0.151 [+0.129, +0.174]; heads add nothing on top of it. All
-  methods are as lossless as NoDraft (96%), and the simulation is within 1% of the real loop on the same sentences.
-  Checked drafting is the vertical cascade of Cascade Speculative Drafting (Chen et al., NeurIPS 2024). Paper:
-  `paper/sec_checked.tex`, `paper/sec_real.tex`.
+- Leviathan et al., *Fast Inference from Transformers via Speculative Decoding*, ICML 2023.
+- Chen et al., *Accelerating LLM Decoding with Speculative Sampling*, 2023.
+- Cai et al., *Medusa*, ICML 2024; Ankner et al., *Hydra*, 2024.
+- Chen et al., *Cascade Speculative Drafting for Even Faster LLM Inference*, NeurIPS 2024;
+  Spector and Ré, *Staged Speculative Decoding*, 2023.
+- He et al., *REST*, NAACL 2024; Oliaro et al., *SuffixDecoding*, 2024.
+- Yang, *No Refund for the Token Tax: Speculative Decoding Across 21 Languages*, 2026.
+- Paudel et al., *Speculative Decoding and the Curse of Multilinguality*, 2026.
+- Syvokon, *Dictionary-Based Speculative Decoding for Non-Latin-Script Languages*, UNLP 2026.
+- Naidu, *Phrase-Level Speculative Decoding on a Frozen Target*, 2026.
+- Kunchukuttan et al., *The IIT Bombay English-Hindi Parallel Corpus*, LREC 2018; NLLB Team, FLORES, 2022.

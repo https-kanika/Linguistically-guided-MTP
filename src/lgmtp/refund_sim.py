@@ -1,4 +1,4 @@
-"""Exact teacher-forced simulation of the "token-tax refund" drafters (PLAN_wordheads.md §3).
+"""Exact teacher-forced simulation of the "token-tax refund" drafters.
 
 Same protocol as Phase 1: greedy, lossless speculative decoding of the 8B outputs stored in the
 Phase-1 traces. A round at committed position ``p`` drafts ``g`` tokens, the 8B accepts the leading

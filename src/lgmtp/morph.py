@@ -1,4 +1,4 @@
-"""Morpheme labelling (PLAN T3, fixes B1): MorphTok loader, gold lexicon, CRF segmenter,
+"""Morpheme labelling (fixes B1): MorphTok loader, gold lexicon, CRF segmenter,
 tiered labeller, causal prefix-boundary model, per-token gold morph labels.
 
 Conventions

@@ -1,10 +1,10 @@
-"""Trace simulator for greedy speculative decoding (PLAN T4, fixes B3, B8).
+"""Trace simulator for greedy speculative decoding (fixes B3, B8).
 
-Ported from ``notebooks/legacy/day2-day3-llama8b-kaggle.ipynb`` (cells 14-17), with:
+Ported from ``notebooks/pre_interim/day2-day3-llama8b-kaggle.ipynb`` (cells 14-17), with:
   1. the ``Policy`` interface ``stop(view, p, g)`` called with g = 1..cap-1 after each drafted token
      (dynamic policies always draft >= 1 token; NoDraft / FixedK(0) / Oracle decide g = 0 via
      ``initial_stop(view, p)``);
-  2. a causality guard (``TraceView``) - see PLAN §3;
+  2. a causality guard (``TraceView``);
   3. lookahead cost: a lookahead-1 policy that stops by itself pays one extra draft forward ``c``;
   4. per-sentence emitted / cost arrays and round records;
   5. measured verification cost as the default.
@@ -12,7 +12,7 @@ Ported from ``notebooks/legacy/day2-day3-llama8b-kaggle.ipynb`` (cells 14-17), w
 Exactness for greedy decoding: within a round the draft's own tokens coincide with the target's up
 to the first mismatch, and everything after it is rejected, so accepted = leading matches.
 Only the stopping decision after a mismatch can differ from a real loop (teacher-forcing
-approximation, PLAN §3).
+approximation).
 """
 from __future__ import annotations
 
@@ -243,7 +243,7 @@ def summarize(res: SimResult) -> dict:
 
 
 # --------------------------------------------------------------------------- #
-# legacy protocol (sanity check against the PDF numbers, PLAN T4)
+# legacy protocol (sanity check against the PDF numbers)
 # --------------------------------------------------------------------------- #
 
 def legacy_protocol(traces: Sequence[Trace], c: float, seed: int = 0) -> dict:

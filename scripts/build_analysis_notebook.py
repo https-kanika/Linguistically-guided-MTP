@@ -1,4 +1,4 @@
-"""Builds notebooks/08_wordheads_analysis.ipynb (Day 3, PLAN_wordheads.md). Run, then execute with
+"""Builds notebooks/08_wordheads_analysis.ipynb (word-completion heads analysis). Run, then execute with
     jupyter nbconvert --to notebook --execute --inplace notebooks/08_wordheads_analysis.ipynb
 Every number shown is read from results/wordheads/ or recomputed from data/ and saved there.
 """

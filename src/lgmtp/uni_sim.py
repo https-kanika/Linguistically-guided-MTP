@@ -2,7 +2,7 @@
 
 For greedy decoding the head's draft at committed position p depends only on out_ids[:p] and q_t for
 t < p, which are the same however p was reached, so drafts can be precomputed for every position and
-the round-by-round loop below is exact up to the cost model (same argument as Phase 1, PLAN §3).
+the round-by-round loop below is exact up to the cost model (same argument as Phase 1).
 
 Round at p: draft g tokens (the head's units converted to the *target's* tokens, see ``convert``),
 accept the leading matches a, emit min(a+1, n-p) tokens, cost = c_head + verify(g).

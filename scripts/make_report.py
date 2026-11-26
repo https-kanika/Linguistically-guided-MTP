@@ -124,7 +124,7 @@ def build() -> tuple[str, str]:
 
     # ================================================================== title
     A("# Does Hindi word and morpheme structure help speculative decoding? Phase 1 report\n")
-    A("CS769 course project (Kanika, Rakshit). This report describes everything done in the first phase of "
+    A("CS769 course project (IIT Bombay). This report describes everything done in the first phase of "
       "the project, why it was done, and what came out. It is written to be read on its own. Every number is "
       "read from a file in `results/phase1/` by `scripts/make_report.py`; file names are given in brackets "
       "where they matter.\n")
@@ -207,7 +207,7 @@ def build() -> tuple[str, str]:
 
     # ================================================================== 3 earlier version
     A("## 3. The earlier version of this project, and why it was redone\n")
-    A("An earlier version of the project (three Jupyter notebooks, kept unchanged in `notebooks/legacy/`) "
+    A("An earlier version of the project (three Jupyter notebooks, kept unchanged in `notebooks/pre_interim/`) "
       "reported these results on half of the FLORES+ test set:\n")
     A(md_table(pd.DataFrame([[r["policy"], r["speedup"], r["acceptance"], r["mean_draft_len"]] for r in OLD["rows"]],
                             columns=["policy (earlier version)", "speed-up", "acceptance", "mean draft length"]),
@@ -771,7 +771,7 @@ def build() -> tuple[str, str]:
       "`selected_params.json` · token-level analysis `analysis_*.csv` / `.png` · morphology `morph*.json`, "
       "`morph_crf.pkl`, `prefix_model.pkl.gz` · tokenizer analysis `test1_*` · real decoding `real_loop*`, "
       "`sim_vs_real*` · earlier version's numbers `earlier_results.json` · suggested slide wording "
-      "`../../docs/slide_corrections.md`.\n")
+      "`../../docs/pre_interim/interim_slide_corrections.md`.\n")
     report = "\n".join(L)
 
     readme_lines = [

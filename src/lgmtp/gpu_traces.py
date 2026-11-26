@@ -1,6 +1,6 @@
 """Target generation, teacher-forced draft/target passes and timing (Kaggle notebook 01).
 
-Ported from the legacy Part A (``notebooks/legacy/day2-day3-llama8b-kaggle.ipynb`` cells 4-11).
+Ported from the legacy Part A (``notebooks/pre_interim/day2-day3-llama8b-kaggle.ipynb`` cells 4-11).
 Everything here also runs on CPU (``scripts/smoke_cpu.py``) with a small model in fp32.
 
 Outputs (in ``out_dir``) for one split:
@@ -404,7 +404,7 @@ def run_split(*, split: str, out_dir, target, draft, tok, tok_d, n: int | None, 
               max_new: int, device: str, git_hash: str, timing_kw: dict | None = None,
               setup_extra: dict | None = None, rows=None, progress: bool = True,
               zip_name: str | None = None) -> dict:
-    """Steps 1-6 of PLAN T2 for one split. Returns a dict with paths and summaries.
+    """Trace collection for one split. Returns a dict with paths and summaries.
 
     timing_kw: passed to ``run_timing`` (steps, reps, max_g); setup_extra: added to timing.json setup
     (e.g. max_memory, GPU names).
@@ -492,7 +492,7 @@ def _prepare_out_dir(out_dir: Path, out_root: Path, resume_from) -> None:
 
 
 def notebook01_main(cfg: dict) -> dict:
-    """Run PLAN T2 steps 1-6 for ``cfg['SPLIT']``. Writes ``{OUT_ROOT}/traces_v2_{split}/`` and
+    """Run trace collection for ``cfg['SPLIT']``. Writes ``{OUT_ROOT}/traces_v2_{split}/`` and
     ``{OUT_ROOT}/traces_v2_{split}.zip``. With ``SMOKE=True`` the draft model is used as both
     target and draft (fp32, CPU, loaded once) and only 3 sentences are processed."""
     torch = _torch()

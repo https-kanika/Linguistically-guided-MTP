@@ -1,6 +1,6 @@
 # Does Hindi word and morpheme structure help speculative decoding? Phase 1 report
 
-CS769 course project (Kanika, Rakshit). This report describes everything done in the first phase of the project, why it was done, and what came out. It is written to be read on its own. Every number is read from a file in `results/phase1/` by `scripts/make_report.py`; file names are given in brackets where they matter.
+CS769 course project (IIT Bombay). This report describes everything done in the first phase of the project, why it was done, and what came out. It is written to be read on its own. Every number is read from a file in `results/phase1/` by `scripts/make_report.py`; file names are given in brackets where they matter.
 
 ## 1. Summary
 
@@ -40,7 +40,7 @@ Either answer is useful if the comparison is fair, which is why most of this pha
 
 ## 3. The earlier version of this project, and why it was redone
 
-An earlier version of the project (three Jupyter notebooks, kept unchanged in `notebooks/legacy/`) reported these results on half of the FLORES+ test set:
+An earlier version of the project (three Jupyter notebooks, kept unchanged in `notebooks/pre_interim/`) reported these results on half of the FLORES+ test set:
 
 | policy (earlier version) | speed-up | acceptance | mean draft length |
 |---|---|---|---|
@@ -512,4 +512,4 @@ python scripts/make_report.py                     # this report
 
 Trace generation ran build `git=0a45b51ed3e2-dirty src_sha256=c75053076a02` (`run_info_*.json` in the trace output). A later CPU-only helper changes the hash of a rebuild; the GPU code is unchanged.
 
-**Files in `results/phase1/`.** Main table `main_table.csv` · tuning grids `grid_*.csv` · chosen settings `selected_params.json` · token-level analysis `analysis_*.csv` / `.png` · morphology `morph*.json`, `morph_crf.pkl`, `prefix_model.pkl.gz` · tokenizer analysis `test1_*` · real decoding `real_loop*`, `sim_vs_real*` · earlier version's numbers `earlier_results.json` · suggested slide wording `../../docs/slide_corrections.md`.
+**Files in `results/phase1/`.** Main table `main_table.csv` · tuning grids `grid_*.csv` · chosen settings `selected_params.json` · token-level analysis `analysis_*.csv` / `.png` · morphology `morph*.json`, `morph_crf.pkl`, `prefix_model.pkl.gz` · tokenizer analysis `test1_*` · real decoding `real_loop*`, `sim_vs_real*` · earlier version's numbers `earlier_results.json` · suggested slide wording `../../docs/pre_interim/interim_slide_corrections.md`.

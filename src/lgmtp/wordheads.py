@@ -1,4 +1,4 @@
-"""Word-completion heads on the draft model (PLAN_wordheads.md).
+"""Word-completion heads on the draft model.
 
 Position convention (same as the Phase-1 traces): for an output ``y[0..n-1]`` after prompt ``P``,
 ``h_t`` is the draft's last (post-norm) hidden state at input index ``len(P) + t - 1``; the frozen LM

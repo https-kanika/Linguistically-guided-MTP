@@ -16,7 +16,7 @@
 [  52.4m]   first batch 11.4s -> ESTIMATE ~6.0 min for this split
 [  58.3m]   1012 outputs; 226 hit MAX_NEW; mean len 150.5 tokens
 [  59.1m]   teacher-forced argmax == generated token: 0.9978  (416s)
-[   0.0m] resume: copied 12 files (0 already present) from /kaggle/input/datasets/rakshitsawarniitb/mtp-finalboss-output/week1; model folders: ['qwen2.5-1.5b']
+[   0.0m] resume: copied 12 files (0 already present) from /kaggle/input/datasets/kaggle-user/mtp-finalboss-output/week1; model folders: ['qwen2.5-1.5b']
 [   0.0m] week1 start | device cuda:0 | build git=9f1203decd0b src+consts_sha256=d875cf2683fc
 [   0.1m] S1 sources: reused sources.json (dev 997, devtest 1012, extra 3000, mono 200000)
 [   0.1m] S2 vocab: reused (47834 units)

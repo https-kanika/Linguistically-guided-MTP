@@ -7,3 +7,11 @@ data/
 kaggle/*.zip
 kaggle/results/
 results/*.zip
+
+# LaTeX build files and Office lock files
+paper/*.aux
+paper/*.log
+paper/*.blg
+paper/*.bbl
+paper/*.out
+~$*

@@ -1,4 +1,4 @@
-"""Tokenizer-independent inputs and unit targets for the universal head (PLAN_phase2_indic_universal_mtp, W1).
+"""Tokenizer-independent inputs and unit targets for the universal head.
 
 A *record* is one generated output of any LLM:
     dict(id, prompt_text, out_ids [n] (incl. a final eos id if the model stopped), eos_end: bool,

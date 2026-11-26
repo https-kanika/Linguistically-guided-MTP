@@ -1,9 +1,9 @@
-  heads found: /kaggle/input/datasets/rakshitsawarniitb/lingumtp/wordheads_07b_180k (N_TRAIN = 180000)  <- used
-heads: /kaggle/input/datasets/rakshitsawarniitb/lingumtp/wordheads_07b_180k -> parameters tuned for the 180k heads
+  heads found: /kaggle/input/datasets/kaggle-user/lingumtp/wordheads_07b_180k (N_TRAIN = 180000)  <- used
+heads: /kaggle/input/datasets/kaggle-user/lingumtp/wordheads_07b_180k -> parameters tuned for the 180k heads
 methods: [('NoDraft', {}), ('Entropy', {'lam': -0.683, 'beta': 4.0}), ('V1+lex', {'lam': -1.1, 'beta': 4.0, 'variant': 'v1', 'tau_h': 0.4, 'tau_c': 0.3, 'lexicon': True}), ('V1+check', {'lam': -0.8, 'beta': 4.0, 'variant': 'v1', 'tau_h': 0.0, 'ngram': False, 'L': 6}), ('NGram', {'lam': -0.6, 'beta': 4.0, 'variant': None, 'tau_h': 0.0, 'ngram': True, 'L': 7}), ('NGram+V0', {'lam': -0.6, 'beta': 4.0, 'variant': 'v0', 'tau_h': 0.5, 'ngram': True, 'L': 6})]
   could not load meta-llama/Meta-Llama-3-8B-Instruct (OSError); trying NousResearch/Meta-Llama-3-8B-Instruct
-n-gram table: /kaggle/input/datasets/rakshitsawarniitb/lingumtp/ngram_hi.npz, order 4, contexts [4132, 108560, 461279, 842144]
-lexicon: 72797 words from /kaggle/input/datasets/rakshitsawarniitb/lingumtp/hindi.csv + dev outputs (paper: 72797)
+n-gram table: /kaggle/input/datasets/kaggle-user/lingumtp/ngram_hi.npz, order 4, contexts [4132, 108560, 461279, 842144]
+lexicon: 72797 words from /kaggle/input/datasets/kaggle-user/lingumtp/hindi.csv + dev outputs (paper: 72797)
 greedy references: 100
 ESTIMATE: 26.5 s per sentence (all methods) -> about 2.2 h for N_SENT=100 x REPEATS=3
 repeat 0 done (33 min)
