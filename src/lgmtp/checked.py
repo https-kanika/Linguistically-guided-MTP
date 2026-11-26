@@ -105,9 +105,11 @@ def proposal(ctx, head_tokens, ngram, L: int, room: int) -> list[int]:
 
 
 # --------------------------------------------------------------------------- exact simulation
-def round_checked(t, p, cost, lam, beta=BETA, variant=None, tau_h=0.0, ngram=None, L=6, gate=None, memo=None):
+def round_checked(t, p, cost, lam, beta=BETA, variant=None, tau_h=0.0, ngram=None, L=6, gate=None, memo=None,
+                  tally=None):
     """(drafted, accepted by the 8B, draft cost, 1B calls). After a wrong 1B token (off the 8B's path, no
-    traces) nothing is proposed and every further token costs a call; those tokens are lost anyway."""
+    traces) nothing is proposed and every further token costs a call; those tokens are lost anyway.
+    ``tally`` (a Counter): proposed tokens the 1B agreed with (calls saved), by position type."""
     n, H, m, a, y = t.n, t.H, t.match, t.draft_argmax, t.target_ids
     hd = t.heads[variant] if variant else None
     log_tau = math.log(tau_h) if tau_h > 0 else -math.inf
@@ -140,6 +142,8 @@ def round_checked(t, p, cost, lam, beta=BETA, variant=None, tau_h=0.0, ngram=Non
                 on = False
             g += 1
             if j < len(F) and on and int(a[q]) == F[j]:    # the 1B agrees: the next token is free
+                if tally is not None:
+                    tally["agreed_word_start" if t.labels["word_initial"][q] else "agreed_continuation"] += 1
                 j += 1
                 continue
             break

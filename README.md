@@ -202,9 +202,14 @@ scripts/feasibility/         the CPU feasibility simulations behind section 3
   diag.py, ctx.py            whole-word accuracy: dictionary (+context) vs 1B
 kaggle/07_wordheads.ipynb    GPU run: train V0/V1/V2, dump predictions along the 8B outputs, time heads
 kaggle/07b_wordheads_long.ipynb  same with 3x training data (180k pairs, ~2.5 h); optional
-src/lgmtp/heads_loop.py      real greedy speculative loop with the heads (NoDraft, Entropy, V0-V2, +lexicon)
+src/lgmtp/heads_loop.py      real greedy speculative loop (NoDraft, Entropy, V0-V2, +lexicon, checked drafting)
+src/lgmtp/checked.py         checked drafting: token n-gram table + exact simulator (the 1B checks proposals in its next call)
+scripts/run_checked_sim.py   builds data/ngram_hi.npz, tunes checked drafting on dev -> results/checked/
+scripts/checked_analysis.py  saved calls by token type, gain by continuation share, data/cost figures, sim vs real
+scripts/feasibility/checked_wordtrie.py   word-trie proposers, checked (results/checked/wordtrie.csv)
 kaggle/09_heads_loop.ipynb   GPU run: wall-clock speed of that loop on the 100 Phase-1 real-loop sentences (T4 x2)
-tests/test_heads_loop.py     losslessness, round-by-round equality with refund_sim, resume, input search
+results/heads_loop/          output of notebook 09 (SUMMARY.md, summary.json, paired_wall.json, sim_vs_real.csv)
+tests/test_heads_loop.py     losslessness, round-by-round equality with the simulators, resume, input search
 tests/test_wordheads.py      label/collate/loss/data-filter tests
 src/lgmtp/refund_sim.py      exact simulator: entropy, ceiling, rho curve, dictionary, heads
 scripts/run_refund_sim.py    tunes on dev, writes results/wordheads/{main_table.csv,sim_results.json,...}
@@ -219,7 +224,7 @@ results/wordheads/           feasibility.json, main_table.csv, sim_results.json,
 Setup (Windows, from the repo root):
 ```bash
 python -m venv .venv && .venv/Scripts/pip install -e . pytest
-.venv/Scripts/python -m pytest -q                         # 143 passed, 2 skipped
+.venv/Scripts/python -m pytest -q                         # 152 passed, 2 skipped
 .venv/Scripts/python scripts/smoke_cpu.py --part wh       # ~minutes, downloads Llama-3.2-1B (HF token needed)
 ```
 
@@ -232,9 +237,17 @@ Feasibility numbers (CPU; each takes a few minutes, `ctx.py` takes longer):
 .venv/Scripts/python scripts/feasibility/ctx.py
 ```
 
-Real loop (Kaggle, **T4 ×2**, roughly 1.5–2 h): upload `kaggle/09_heads_loop.ipynb`, attach the output of notebook 07b
-(or its `wordheads.zip` as a Dataset) and a Dataset with `hindi.csv`, secret `HF_TOKEN`, Internet on, *Save & Run All*.
-Unzip `heads_loop.zip` into `results/heads_loop/`. Rebuild with `scripts/build_kaggle_notebooks.py wl`.
+Checked drafting (CPU, a few minutes each; needs `../week1/data/sources.json`, the IITB Hindi sentences):
+```bash
+.venv/Scripts/python scripts/run_checked_sim.py --sources ../week1/data/sources.json
+.venv/Scripts/python scripts/checked_analysis.py
+.venv/Scripts/python scripts/feasibility/checked_wordtrie.py
+```
+
+Real loop (Kaggle, **T4 ×2**, about 2 h): upload `kaggle/09_heads_loop.ipynb`, attach a Dataset with
+`wordheads_07b_180k.zip` (or the output of notebook 07b), `hindi.csv` and `ngram_hi.npz`, secret `HF_TOKEN`,
+Internet on, *Save & Run All*. Unzip `heads_loop.zip` into `results/heads_loop/`. Rebuild with
+`scripts/build_kaggle_notebooks.py wl`.
 
 GPU run (Kaggle, one T4, about 1–1.5 h):
 1. Rebuild if code changed: `.venv/Scripts/python scripts/build_kaggle_notebooks.py wh`.
@@ -259,7 +272,9 @@ Decision points:
   paper is then a negative-but-quantified result: the 1.91× ceiling, the context finding, the break-even
   curve, and how far MTP heads get.
 - If V1 ≈ V0, word guidance doesn't help MTP heads. We report that.
-- Real GPU decoding loop with heads: `src/lgmtp/heads_loop.py` + `kaggle/09_heads_loop.ipynb` (built, tested on
-  CPU, **not yet run on Kaggle**). It needs the output of notebook 07b and `hindi.csv` as inputs. Until it has run,
-  all head speed-ups are simulated: acceptance is exact, and in Phase 1 the real loop was 3.4–7.8% below the
-  simulation.
+- Real GPU decoding loop: **done** (notebook 09, 2×T4, 100 sentences × 3). Wall-clock vs NoDraft: Entropy 1.384,
+  V1 + lexicon 1.469, V1 checked 1.505, **4-gram checked 1.620** [1.580, 1.657], 4-gram + V0 checked 1.620. The
+  checked 4-gram (no training) beats V1 + lexicon by +0.151 [+0.129, +0.174]; heads add nothing on top of it. All
+  methods are as lossless as NoDraft (96%), and the simulation is within 1% of the real loop on the same sentences.
+  Checked drafting is the vertical cascade of Cascade Speculative Drafting (Chen et al., NeurIPS 2024). Paper:
+  `paper/sec_checked.tex`, `paper/sec_real.tex`.

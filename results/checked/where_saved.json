@@ -1,0 +1,8 @@
+{
+ "continuation_share_of_tokens": 0.5938,
+ "continuation_share_of_correct_1B_tokens": 0.6482,
+ "agreed_proposal_tokens": 18339,
+ "agreed_continuation": 14200,
+ "agreed_word_start": 4139,
+ "continuation_share_of_saved_calls": 0.7743
+}

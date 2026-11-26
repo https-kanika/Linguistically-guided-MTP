@@ -1,0 +1,13 @@
+{
+ "draft_ms_per_call": {
+  "Entropy": 23.27,
+  "V1+lex": 23.41,
+  "V1+check": 23.46,
+  "NGram": 23.27,
+  "NGram+V0": 23.75
+ },
+ "v1_lex_minus_entropy": [
+  0.0844,
+  0.0967
+ ]
+}

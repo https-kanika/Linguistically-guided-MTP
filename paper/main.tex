@@ -86,6 +86,7 @@ proposed almost for free, most of the tax would be refunded.
 
 %=====================================================================
 \section{Background and related work}
+\label{sec:related}
 
 \paragraph{Speculative decoding and decoding heads.}
 Medusa \citep{cai2024medusa} adds extra heads to the target's last hidden state, each predicting a
@@ -99,7 +100,20 @@ REST \citep{he2024rest} and SuffixDecoding \citep{oliaro2024suffixdecoding} draf
 or suffix tree. DictSpec \citep{dictspec2026} drafts Ukrainian and Crimean Tatar from a static
 n-gram table, with gains that grow with tokenizer fertility, and \citet{paudel2026ngram} find that
 n-gram drafters give moderate speed-ups across languages because drafting with them costs almost
-nothing. Our dictionary baselines test this idea for Hindi and quantify its limit.
+nothing. Our dictionary baselines test this idea for Hindi and quantify its limit. These drafters
+propose directly to the target; in checked drafting (Section~\ref{sec:checked}) an n-gram's proposals
+are first checked by the draft model.
+
+\paragraph{Cascaded drafting.}
+Staged speculative decoding \citep{spector2023staged} adds a cheaper second draft stage below the draft
+model, a Katz back-off trigram model. Cascade Speculative Drafting \citep{chen2024cascade} generalises
+this into a \emph{vertical cascade}, in which each draft model reviews the drafts of a smaller one down
+to a statistical model (Max-Gram: longest matches with the prompt or the generation so far, with a
+bigram fallback), and combines it with a \emph{horizontal cascade} that uses smaller drafters for later
+tokens. Our checked drafting is a vertical cascade with a token n-gram at the bottom; we do not claim the
+mechanism. We add an account of why it works for a high-fertility language (most of the draft calls it
+saves are word continuations), and a controlled comparison, in simulation and on hardware, with trained
+word-completion heads and lexicon constraints, which it beats.
 
 \paragraph{Adaptive drafting.}
 Several systems switch between drafters or stop drafting based on confidence
@@ -135,13 +149,15 @@ recorded draft predictions along $y$, the number of accepted tokens in each roun
 sequence of committed tokens, can be computed exactly without running the models. Only the number of
 further tokens drafted after a wrong one is approximate, because it uses draft features along $y$; in
 Phase 1 this changed the speed-up by 0.2--1.4\%. In total, a real GPU decoding loop was 3.4--7.8\% below
-the Phase 1 simulation on 100 sentences (Entropy: 1.440\x{} simulated, 1.356\x{} real).
+the Phase 1 simulation on 100 sentences (Entropy: 1.440\x{} simulated, 1.356\x{} real). The decoding
+loop of Section~\ref{sec:real} removes most of the loop overhead: there, the simulation is within 1\% of
+the measured speed-up for every drafter.
 
 \paragraph{Cost.} We measure time in units of one target forward. A draft call costs
 $c = t_\text{draft}/t_\text{target} = 0.323$. Verifying $g$ drafted tokens costs
 $v(g) = t_\text{verify}(g)/t_\text{target}$, measured for $g\le 8$ (1.02 to 1.07). Reading $q$
 pending tokens into the draft's KV cache in one call costs $c\,r(q)$ with $r(q)\approx 1$ for $q \le 8$
-(measured). A forward of the $K=3$ heads over the continuation vocabulary costs $0.018\,c$; over the
+(measured with LM-head logits at every position read). A forward of the $K=3$ heads over the continuation vocabulary costs $0.018\,c$; over the
 full 128k vocabulary it costs $0.114\,c$. The speed-up on a set of sentences is
 \begin{equation}
 S = \frac{\sum_\text{rounds} (a + 1)}{\sum_\text{rounds} \big(C_\text{draft} + v(g)\big)},
@@ -388,6 +404,9 @@ the approximate share of tokens that continue a word (on the 8B's own outputs th
 The gated Gemma and Aya tokenizers were not measured.}
 \label{tab:tax}
 \end{table}
+
+\input{sec_checked}
+\input{sec_real}
 
 %=====================================================================
 \section{Discussion and limitations}
